@@ -308,7 +308,7 @@ public:
       const std::string &value)
   {
     INVARIANT(n < N);
-    INVARIANT(arena->manages(&value));
+    //    INVARIANT(arena->manages(&value));
     if (ignore_key) {
       values.emplace_back(nullptr, &value);
     } else {

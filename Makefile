@@ -9,7 +9,7 @@ CHECK_INVARIANTS ?= 0
 # 1 = jemalloc
 # 2 = tcmalloc
 # 3 = flow
-USE_MALLOC_MODE ?= 1
+USE_MALLOC_MODE ?= 0
 
 MYSQL ?= 1
 MYSQL_SHARE_DIR ?= /x/stephentu/mysql-5.5.29/build/sql/share
@@ -141,7 +141,8 @@ MASSTREE_SRCFILES = masstree/compiler.cc \
 	masstree/str.cc \
 	masstree/string.cc \
 	masstree/straccum.cc \
-	masstree/json.cc
+	masstree/json.cc \
+	masstree/kvthread.cc
 endif
 
 OBJFILES := $(patsubst %.cc, $(O)/%.o, $(SRCFILES))

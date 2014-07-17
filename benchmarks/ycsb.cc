@@ -76,7 +76,9 @@ public:
     void * const txn = db->new_txn(txn_flags, arena, txn_buf(), abstract_db::HINT_KV_GET_PUT);
     scoped_str_arena s_arena(arena);
     try {
-      tbl->put(txn, u64_varkey(r.next() % nkeys).str(str()), str().assign(YCSBRecordSize, 'b'));
+      auto s = u64_varkey(r.next() % nkeys).str(str());
+      auto s2 = str().assign(YCSBRecordSize, 'b');
+      tbl->put(txn, s, s2);
       measure_txn_counters(txn, "txn_write");
       if (likely(db->commit_txn(txn)))
         return txn_result(true, 0);

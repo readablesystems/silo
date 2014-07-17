@@ -22,6 +22,7 @@
 #if !NO_MYSQL
 #include "mysql_wrapper.h"
 #endif
+#include "mbta_wrapper.hh"
 
 using namespace std;
 using namespace util;
@@ -311,6 +312,8 @@ main(int argc, char **argv)
     string dbdir = basedir + "/mysql-db";
     db = new mysql_wrapper(dbdir, bench_type);
 #endif
+  } else if (db_type == "mbta") {
+    db = new mbta_wrapper;
   } else
     ALWAYS_ASSERT(false);
 
