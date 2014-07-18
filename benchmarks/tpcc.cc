@@ -1491,7 +1491,6 @@ tpcc_worker::txn_delivery()
       // XXX(stephentu): mutable scans would help here
       tbl_order_line(warehouse_id)->scan(txn, Encode(obj_key0, k_oo_0), &Encode(obj_key1, k_oo_1), c, s_arena.get());
       float sum = 0.0;
-      printf("size: %d\n", c.size());
       for (size_t i = 0; i < c.size(); i++) {
         order_line::value v_ol_temp;
         const order_line::value *v_ol = Decode(*c.values[i].second, v_ol_temp);

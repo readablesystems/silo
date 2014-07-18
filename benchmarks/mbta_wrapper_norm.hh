@@ -28,7 +28,13 @@ public:
       throw abstract_db::abstract_abort_exception();
     }
 #endif
-    STD_OP(return mbta.transGet(t, key, value));
+    STD_OP({
+	std::string tmp;
+	bool ret = mbta.transGet(t, key, tmp);
+	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
+	value.assign(tmp.data(), std::min(tmp.length(), max_bytes_read));
+	return ret;
+	  });
   }
 
   const char *put(
@@ -62,10 +68,9 @@ public:
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
-    printf("scan\n");
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
     STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, mbta_type::value_type& value) {
-	  printf("callback\n");
+	  // TODO: support this directly as performance opt
           return callback.invoke(key.data(), key.length(), value);
         }));
   }

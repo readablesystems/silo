@@ -391,7 +391,7 @@ public:
       auto& item = t.item(this, value);
       if (!item.has_read())
         t.add_read(item, value->version);
-      callback(key, value->value);
+      return callback(key, value->value);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback)> scanner(end, node_callback, value_callback);
@@ -407,7 +407,7 @@ public:
       auto& item = t.item(this, value);
       if (!item.has_read())
         t.add_read(item, value->version);
-      callback(key, value->value);
+      return callback(key, value->value);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback), true> scanner(end, node_callback, value_callback);
@@ -454,8 +454,7 @@ private:
           return false;
       }
       
-      valuecallback_(key.full_string(), value);
-      return true;
+      return valuecallback_(key.full_string(), value);
     }
 
     Str boundary_;
