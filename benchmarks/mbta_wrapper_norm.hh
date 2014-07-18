@@ -16,23 +16,17 @@ class mbta_wrapper;
 
 class mbta_ordered_index : public abstract_ordered_index {
 public:
-  mbta_ordered_index(const std::string &name) : mbta(), name(name) {}
+  mbta_ordered_index(const std::string &name, mbta_wrapper *db) : mbta(), name(name), db(db) {}
+
+  std::string *arena(void);
 
   bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
-    (void)max_bytes_read;
-#if 0
-    auto& t = *unpack<Transaction*>(txn);
-    try {
-      return mbta.transGet(t, key, value);
-    } catch (Transaction::Abort E) {
-      throw abstract_db::abstract_abort_exception();
-    }
-#endif
     STD_OP({
-	std::string tmp;
-	bool ret = mbta.transGet(t, key, tmp);
+	// TODO: we'll still be faster if we just add support for max_bytes_read
+	std::string *s = arena();
+	bool ret = mbta.transGet(t, key, *s);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
-	value.assign(tmp.data(), std::min(tmp.length(), max_bytes_read));
+	value.assign(s->data(), std::min(s->length(), max_bytes_read));
 	return ret;
 	  });
   }
@@ -107,10 +101,13 @@ private:
 
   const std::string name;
 
+  mbta_wrapper *db;
+
 };
 
 
 class mbta_wrapper : public abstract_db {
+public:
   ssize_t txn_max_batch_size() const OVERRIDE { return 100; }
   
   void
@@ -144,12 +141,14 @@ class mbta_wrapper : public abstract_db {
     return sizeof(Transaction);
   }
 
+  static __thread str_arena *thr_arena;
   void *new_txn(
                 uint64_t txn_flags,
                 str_arena &arena,
                 void *buf,
                 TxnProfileHint hint = HINT_DEFAULT) {
     Transaction *txn = new (buf) Transaction;
+    thr_arena = &arena;
     return txn;
   }
 
@@ -168,7 +167,7 @@ class mbta_wrapper : public abstract_db {
   open_index(const std::string &name,
              size_t value_size_hint,
              bool mostly_append = false) {
-    auto ret = new mbta_ordered_index(name);
+    auto ret = new mbta_ordered_index(name, this);
     ret->mbta.thread_init();
     return ret;
   }
@@ -179,3 +178,9 @@ class mbta_wrapper : public abstract_db {
  }
 
 };
+
+__thread str_arena* mbta_wrapper::thr_arena;
+
+std::string *mbta_ordered_index::arena() {
+  return (*db->thr_arena)();
+}
