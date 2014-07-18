@@ -531,7 +531,7 @@ public:
       return;
     }
     if (!we_inserted(item)) {
-      value_type v = item.template write_value<value_type>();
+      value_type& v = item.template write_value<value_type>();
       e->value = std::move(v);
     }
     // also marks valid if needed
