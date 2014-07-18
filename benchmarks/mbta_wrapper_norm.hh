@@ -23,10 +23,8 @@ public:
   bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	std::string *s = arena();
-	bool ret = mbta.transGet(t, key, *s);
+	bool ret = mbta.transGet<true>(t, key, value, max_bytes_read);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
-	value.assign(s->data(), std::min(s->length(), max_bytes_read));
 	return ret;
 	  });
   }

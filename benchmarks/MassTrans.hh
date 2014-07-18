@@ -240,7 +240,8 @@ public:
     return found;
   }
 
-  bool transGet(Transaction& t, Str key, value_type& retval, threadinfo_type& ti = mythreadinfo) {
+  template <bool String = false>
+  bool transGet(Transaction& t, Str key, value_type& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
@@ -255,11 +256,16 @@ public:
       }
       if (item.has_write()) {
         // read directly from the element if we're inserting it
-        retval = we_inserted(item) ? e->value : item.template write_value<value_type>();
+	auto& val = we_inserted(item) ? e->value : item.template write_value<value_type>();
+	if (String) {
+	  retval.assign(val.data(), std::min(val.length(), max_read));
+	} else {
+	  retval = val;
+	}
         return true;
       }
       Version elem_vers;
-      atomicRead(e, elem_vers, retval);
+      atomicRead<String>(e, elem_vers, retval, max_read);
       if (!item.has_read() || item.template read_value<Version>() & valid_check_only_bit) {
         t.add_read(item, elem_vers);
       }
@@ -744,17 +750,19 @@ private:
     *v = cur;
   }
 
-  void atomicRead(versioned_value *e, Version& vers, value_type& val) {
+  template <bool String = false>
+  void atomicRead(versioned_value *e, Version& vers, value_type& val, size_t max_read = (size_t)-1) {
     Version v2;
-    value_type tmp;
     do {
       vers = e->version;
       fence();
-      tmp = e->value;
+      if (String)
+	val.assign(e->value.data(), std::min(e->value.length(), max_read));
+      else
+	val = e->value;
       fence();
       v2 = e->version;
     } while (vers != v2);
-    val = std::move(tmp);
   }
 
   struct table_params : public Masstree::nodeparams<15,15> {
