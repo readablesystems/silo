@@ -319,14 +319,17 @@ public:
 
   template <bool INSERT = true, bool SET = true>
   bool transPut(Transaction& t, Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
-    if (!INSERT) {
+    // (hopefully) optimization to do an unlocked lookup first
+    if (SET) {
       unlocked_cursor_type lp(table_, key);
       bool found = lp.find_unlocked(*ti.ti);
       if (found) {
         return handlePutFound<INSERT, SET>(t, lp.value(), value);
       } else {
-        ensureNotFound(t, lp.node(), lp.full_version_value());
-        return false;
+	if (!INSERT) {
+	  ensureNotFound(t, lp.node(), lp.full_version_value());
+	  return false;
+	}
       }
     }
 
@@ -339,6 +342,7 @@ public:
     } else {
       auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
       versioned_value* val = new(p) versioned_value;
+      // copy
       val->value = value;
       val->version = invalid_bit;
       fence();
@@ -661,8 +665,10 @@ private:
     if (SET) {
       // if we're inserting this element already we can just update the value we're inserting
       if (we_inserted(item))
+	// copy
         e->value = value;
       else
+	// copy
         t.add_write(item, value);
     }
     return true;
