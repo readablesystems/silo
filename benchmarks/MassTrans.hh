@@ -253,6 +253,7 @@ public:
         return false;
       }
       //      __builtin_prefetch();
+      __builtin_prefetch(e->value.data() - sizeof(std::string::size_type)*3);
       if (has_delete(item)) {
         return false;
       }
@@ -632,7 +633,7 @@ public:
 private:
   template <bool INSERT=true, bool SET=true>
   bool handlePutFound(Transaction& t, versioned_value *e, const value_type& value) {
-    auto& item = t.item(this, e);
+    auto& item = t.add_item(this, e);
     if (!validityCheck(item, e)) {
       t.abort();
       return false;
@@ -678,6 +679,7 @@ private:
 
   template <typename NODE, typename VERSION>
   bool updateNodeVersion(Transaction& t, NODE *node, VERSION prev_version, VERSION new_version) {
+    return false;
     auto node_item = t.has_item(this, tag_inter(node));
     if (node_item) {
       if (node_item->has_read() &&
