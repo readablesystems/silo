@@ -244,6 +244,7 @@ bench_runner::run()
     workers[i]->join();
   const unsigned long elapsed_nosync = t_nosync.lap();
   db->do_txn_finish(); // waits for all worker txns to persist
+  //  usleep(100000);
   size_t n_commits = 0;
   size_t n_aborts = 0;
   uint64_t latency_numer_us = 0;

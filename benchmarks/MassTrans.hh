@@ -241,16 +241,18 @@ public:
   }
 
   template <bool String = false>
-  bool transGet(Transaction& t, Str key, value_type& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
+  /*__attribute__((flatten))*/ bool transGet(Transaction& t, Str key, value_type& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
       versioned_value *e = lp.value();
-      auto& item = t.item(this, e);
+      //      __builtin_prefetch(&e->version);
+      auto& item = t.add_item(this, e);
       if (!validityCheck(item, e)) {
         t.abort();
         return false;
       }
+      //      __builtin_prefetch();
       if (has_delete(item)) {
         return false;
       }
@@ -394,7 +396,7 @@ public:
       this->ensureNotFound(t, node, version);
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
-      auto& item = t.item(this, value);
+      auto& item = t.add_item(this, value);
       if (!item.has_read())
         t.add_read(item, value->version);
       return callback(key, value->value);
@@ -410,7 +412,7 @@ public:
       this->ensureNotFound(t, node, version);
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
-      auto& item = t.item(this, value);
+      auto& item = t.add_item(this, value);
       if (!item.has_read())
         t.add_read(item, value->version);
       return callback(key, value->value);
@@ -668,7 +670,7 @@ private:
   template <typename NODE, typename VERSION>
   void ensureNotFound(Transaction& t, NODE n, VERSION v) {
     // TODO: could be more efficient to use add_item here, but that will also require more work for read-then-insert
-    auto& item = t.item(this, tag_inter(n));
+    auto& item = t.add_item(this, tag_inter(n));
     if (!item.has_read()) {
       t.add_read(item, v);
     }
@@ -695,7 +697,8 @@ private:
   }
 
   bool validityCheck(TransItem& item, versioned_value *e) {
-    return we_inserted(item) || !(e->version & invalid_bit);
+    return //likely(we_inserted(item)) || !(e->version & invalid_bit);
+      likely(!(e->version & invalid_bit)) || we_inserted(item);
   }
 
   static constexpr Version lock_bit = 1U<<(sizeof(Version)*8 - 1);

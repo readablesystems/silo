@@ -16,7 +16,7 @@
 #include "Interface.hh"
 #include "TransItem.hh"
 
-#define INIT_SET_SIZE 16
+#define INIT_SET_SIZE 512
 
 #if PERF_LOGGING
 uint64_t total_n;
