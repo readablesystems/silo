@@ -319,7 +319,7 @@ public:
 
   template <bool INSERT = true, bool SET = true>
   bool transPut(Transaction& t, Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
-    // (hopefully) optimization to do an unlocked lookup first
+    // optimization to do an unlocked lookup first
     if (SET) {
       unlocked_cursor_type lp(table_, key);
       bool found = lp.find_unlocked(*ti.ti);
@@ -370,7 +370,6 @@ public:
 #endif
       }
       auto& item = t.add_item<false>(this, val);
-      // TODO: this isn't great because it's going to require an extra alloc (because Str/std::string is 2 words)...
       // we convert to std::string because Str objects are not copied!!
       t.add_write(item, std::string(key));
       t.add_undo(item);

@@ -126,7 +126,7 @@ public:
     }
     void *k = pack(key);
     // TODO: TransData packs its arguments so we're technically double packing here (void* packs to void* though)
-    transSet_.emplace_back(s, TransData(k, NULL, NULL));
+    transSet_.emplace_back(s, k, NULL, NULL);
     return transSet_[transSet_.size()-1];
   }
 
@@ -143,6 +143,10 @@ public:
   // tries to find an existing item with this key, returns NULL if not found
   template <typename T>
   TransItem* has_item(Shared *s, T key) {
+    // TODO: the semantics here are wrong. this all works fine if key if just some opaque pointer (which it sorta has to be anyway)
+    // but if it wasn't, we'd be doing silly copies here, AND have totally incorrect behavior anyway because k would be a unique
+    // pointer and thus not comparable to anything in the transSet. We should either actually support custom key comparisons
+    // or enforce that key is in fact trivially copyable/one word
     void *k = pack(key);
     for (TransItem& ti : transSet_) {
 #if PERF_LOGGING
@@ -157,18 +161,19 @@ public:
 
   template <typename T>
   void add_write(TransItem& ti, T wdata) {
-    ti.add_write(wdata);
+    // TODO: add firstWrites optimization again
+    ti._add_write(std::move(wdata));
   }
   template <typename T>
   void add_read(TransItem& ti, T rdata) {
-    ti.add_read(rdata);
+    ti._add_read(std::move(rdata));
   }
   void add_undo(TransItem& ti) {
-    ti.add_undo();
+    ti._add_undo();
   }
 
   void add_afterC(TransItem& ti) {
-    ti.add_afterC();
+    ti._add_afterC();
   }
 
   bool commit() {
