@@ -120,7 +120,7 @@ public:
 
   // adds item without checking its presence in the array
   template <bool NOCHECK = true, typename T>
-  TransItem& add_item(Shared *s, T key) {
+  inline ALWAYS_INLINE TransItem& add_item(Shared *s, T key) {
     if (NOCHECK) {
       readMyWritesOnly_ = false;
     }

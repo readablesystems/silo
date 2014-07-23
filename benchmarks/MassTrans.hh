@@ -355,7 +355,7 @@ public:
       auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
       versioned_value* val = new(p) versioned_value;
       // copy
-      val->value = value;
+      val->value.assign(value.data(), value.length());
       val->version = invalid_bit;
       fence();
       lp.value() = val;
@@ -683,7 +683,9 @@ private:
 #if PERF_LOGGING
 	ref_mallocs++;
 #endif
-        t.add_write(item, value);
+      // TODO: not using refcounting here and making our own copy leads to a pretty big (almost 10%) speedup.
+      // but this is something that only works for strings so we need to change this code to not be string specific...
+      t.add_write(item, std::string(value.data(), value.length()));
     }
     return true;
   }
@@ -785,7 +787,9 @@ private:
       read_mallocs++;
 #endif
       if (String)
-	val.assign(e->value.data(), std::min(e->value.length(), max_read));
+	// TODO: this seems to provide maybe a slight speedup BUT is probably not remotely thread-safe so we should probably just do the assign
+	val = e->value;
+	//val.assign(e->value.data(), std::min(e->value.length(), max_read));
       else
 	val = e->value;
       fence();
