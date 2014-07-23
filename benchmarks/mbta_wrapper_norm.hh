@@ -62,7 +62,6 @@ public:
             str_arena *arena = nullptr) {
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
     STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, mbta_type::value_type& value) {
-	  // TODO: support this directly as performance opt
           return callback.invoke(key.data(), key.length(), value);
         }));
   }
@@ -117,6 +116,9 @@ public:
   void
   do_txn_finish() const
   {
+#if PERF_LOGGING
+    printf("v: %lu, k %lu, ref %lu, read %lu\n", version_mallocs, key_mallocs, ref_mallocs, read_mallocs);
+#endif
     //txn_epoch_sync<Transaction>::finish();
   }
 

@@ -15,6 +15,10 @@
 
 #if PERF_LOGGING
 uint64_t node_aborts;
+uint64_t version_mallocs;
+uint64_t key_mallocs;
+uint64_t ref_mallocs;
+uint64_t read_mallocs;
 #endif
 
 #if !RCU
@@ -308,6 +312,9 @@ public:
         t.add_read(item, valid_check_only_bit);
       }
       // same as inserts we need to store (copy) key so we can lookup to remove later
+#if PERF_LOGGING
+      key_mallocs++;
+#endif
       t.add_write(item, std::string(key));
       item.set_flags(delete_bit);
       return found;
@@ -340,6 +347,11 @@ public:
       lp.finish(0, *ti.ti);
       return handlePutFound<INSERT, SET>(t, e, value);
     } else {
+#if PERF_LOGGING
+      version_mallocs++;
+      key_mallocs++;
+      ref_mallocs++;
+#endif
       auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
       versioned_value* val = new(p) versioned_value;
       // copy
@@ -668,6 +680,9 @@ private:
         e->value = value;
       else
 	// copy
+#if PERF_LOGGING
+	ref_mallocs++;
+#endif
         t.add_write(item, value);
     }
     return true;
@@ -766,6 +781,9 @@ private:
     do {
       vers = e->version;
       fence();
+#if PERF_LOGGING
+      read_mallocs++;
+#endif
       if (String)
 	val.assign(e->value.data(), std::min(e->value.length(), max_read));
       else
