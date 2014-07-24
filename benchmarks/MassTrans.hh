@@ -284,7 +284,8 @@ public:
     return found;
   }
 
-  bool transDelete(Transaction& t, Str key, threadinfo_type& ti = mythreadinfo) {
+  template <typename StringType>
+  bool transDelete(Transaction& t, StringType key, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
@@ -323,7 +324,7 @@ if (!valid) {
 #if PERF_LOGGING
       key_mallocs++;
 #endif
-      t.add_write(item, std::string(key));
+      t.add_write(item, std::move(key));
       item.set_flags(delete_bit);
       return found;
     } else {
@@ -332,8 +333,8 @@ if (!valid) {
     }
   }
 
-  template <bool INSERT = true, bool SET = true>
-  bool transPut(Transaction& t, Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
+  template <bool INSERT = true, bool SET = true, typename StringType>
+  bool transPut(Transaction& t, StringType key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
     // optimization to do an unlocked lookup first
     if (SET) {
       unlocked_cursor_type lp(table_, key);
@@ -390,18 +391,19 @@ if (!valid) {
 #endif
       }
       auto& item = t.add_item<false>(this, val);
-      // we convert to std::string because Str objects are not copied!!
-      t.add_write(item, std::string(key));
+      t.add_write(item, std::move(key));
       t.add_undo(item);
       return found;
     }
   }
 
-  bool transUpdate(Transaction& t, Str k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
+  template <typename StringType>
+  bool transUpdate(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
     return transPut</*insert*/false, /*set*/true>(t, k, v, ti);
   }
 
-  bool transInsert(Transaction& t, Str k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
+  template <typename StringType>
+  bool transInsert(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
     return !transPut</*insert*/true, /*set*/false>(t, k, v, ti);
   }
 
@@ -579,8 +581,10 @@ public:
     free_packed<versioned_value*>(item.key());
     if (item.has_read())
       free_packed<Version>(item.data.rdata);
+#endif
     if (we_inserted(item) || has_delete(item))
       free_packed<std::string>(item.data.wdata);
+#if 0
     else if (item.has_write())
       free_packed<value_type>(item.data.wdata);
 #endif
