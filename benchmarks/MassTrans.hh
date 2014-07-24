@@ -252,12 +252,13 @@ public:
       versioned_value *e = lp.value();
       //      __builtin_prefetch(&e->version);
       auto& item = t.add_item(this, e);
-      if (!validityCheck(item, e)) {
+      if (e->version & invalid_bit){//!validityCheck(item, e)) {
         t.abort();
         return false;
       }
       //      __builtin_prefetch();
       __builtin_prefetch(e->value.data() - sizeof(std::string::size_type)*3);
+#if 0 /* we're not reading our writes anyway */
       if (has_delete(item)) {
         return false;
       }
@@ -271,6 +272,7 @@ public:
 	}
         return true;
       }
+#endif
       Version elem_vers;
       atomicRead<String>(e, elem_vers, retval, max_read);
       if (!item.has_read() || item.template read_value<Version>() & valid_check_only_bit) {
