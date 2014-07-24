@@ -124,8 +124,10 @@ struct TransItem {
   }
 
   inline bool operator<(const TransItem& t2) const {
-      return data < t2.data
-        || (data == t2.data && shared < t2.shared);
+    // we compare keys and THEN shared objects here so that read and write keys with the same value
+    // are next to each other
+    return data < t2.data
+      || (data == t2.data && shared < t2.shared);
   }
 
   // TODO: should these be done Transaction methods like their add_ equivalents?

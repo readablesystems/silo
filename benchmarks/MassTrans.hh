@@ -289,8 +289,9 @@ public:
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
       versioned_value *e = lp.value();
-      auto& item = t.item(this, e);
+      auto& item = t.add_item(this, e);
       bool valid = !(e->version & invalid_bit);
+#if 0
       if (!valid && we_inserted(item)) {
         if (has_delete(item)) {
           // insert-then-delete then delete, so second delete should return false
@@ -300,16 +301,21 @@ public:
         item.set_flags(delete_bit);
         // key is already in write data since this used to be an insert
         return true;
-      } else if (!valid) {
+      } else 
+#endif
+if (!valid) {
         t.abort();
         return false;
       }
       assert(valid);
+#if 0
       // already deleted!
       if (has_delete(item)) {
         return false;
       }
-      if (!item.has_read()) {
+      if (!item.has_read()) 
+#endif
+	{
         // we only need to check validity, not if the item has changed
         t.add_read(item, valid_check_only_bit);
       }

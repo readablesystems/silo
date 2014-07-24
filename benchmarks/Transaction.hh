@@ -214,14 +214,16 @@ public:
         total_r++;
 #endif
         bool has_write = it->has_write();
-        if (!has_write && !readMyWritesOnly_)
-          for (auto it2 = it + 1;
+        if (!has_write && !readMyWritesOnly_) {
+          for (auto it2 = it+1;
                it2 != trans_last && it2->same_item(*it);
-               ++it2)
+               ++it2) {
             if (it2->has_write()) {
               has_write = true;
               break;
             }
+	  }
+	}
         if (!it->sharedObj()->check(*it, has_write)) {
           success = false;
           goto end;
