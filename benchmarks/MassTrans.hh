@@ -9,6 +9,7 @@
 #include "../masstree/masstree_scan.hh"
 #include "../masstree/string.hh"
 #include "Transaction.hh"
+#include "chunked.hh"
 
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
@@ -162,7 +163,7 @@ public:
 
 private:
   typedef uint32_t Version;
-  struct versioned_value : public threadinfo::rcu_callback {
+  struct versioned_value /*: public threadinfo::rcu_callback*/ {
     Version version;
     value_type value;
 
@@ -173,7 +174,7 @@ private:
     }
     
     // rcu_callback method to self-destruct ourself
-    void operator()(threadinfo& ti) override {
+    void operator()(threadinfo& ti) {
       // this will call value's destructor
       this->versioned_value::~versioned_value();
       // and free our memory too
@@ -361,8 +362,8 @@ if (!valid) {
       key_mallocs++;
       ref_mallocs++;
 #endif
-      auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
-      versioned_value* val = new(p) versioned_value;
+      //      auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
+      versioned_value* val = new(versioned_value_alloc.next()) versioned_value;
       // copy
       val->value.assign(value.data(), value.length());
       val->version = invalid_bit;
@@ -591,7 +592,7 @@ public:
   bool remove(const Str& key, threadinfo_type& ti = mythreadinfo) {
     cursor_type lp(table_, key);
     bool found = lp.find_locked(*ti.ti);
-    ti.ti->rcu_register(lp.value());
+    //    ti.ti->rcu_register(lp.value());
     lp.finish(found ? -1 : 0, *ti.ti);
     // rcu the value
     return found;
@@ -816,6 +817,7 @@ private:
   typedef Masstree::tcursor<table_params> cursor_type;
   typedef Masstree::leaf<table_params> leaf_type;
   table_type table_;
+  chunked<versioned_value> versioned_value_alloc;
 };
 
 template <typename V>
