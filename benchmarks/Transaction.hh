@@ -182,14 +182,24 @@ public:
     auto it = &item;
     bool has_write = it->has_write();
     if (!has_write) {
-      auto perm_end = permute + perm_size;
-      for (auto it2 = permute; it2 != perm_end; ++it2) {
-	__builtin_prefetch(&transSet_[*(it2+1)]);
-	if (transSet_[*it2].same_item(*it) && transSet_[*it2].has_write()) {
-	  has_write = true;
-	  break;
-	}
-      }
+      has_write = std::binary_search(permute, permute + perm_size, -1, [&] (const int& i, const int& j) {
+	  auto& e1 = unlikely(i < 0) ? item : transSet_[i];
+	  auto& e2 = likely(j < 0) ? item : transSet_[j];
+	  auto ret = likely(e1.data < e2.data) || (unlikely(e1.data == e2.data) && unlikely(e1.sharedObj() < e2.sharedObj()));
+#if 0
+	  if (likely(i >= 0)) {
+	    auto cur = &i;
+	    int idx;
+	    if (ret) {
+	      idx = (cur - permute) / 2;
+	    } else {
+	      idx = (permute + perm_size - cur) / 2;
+	    }
+	    __builtin_prefetch(&transSet_[idx]);
+	  }
+#endif
+	  return ret;
+	});
     }
     return has_write;
   }
