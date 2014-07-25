@@ -182,22 +182,11 @@ public:
     auto it = &item;
     bool has_write = it->has_write();
     if (!has_write) {
-      auto trans_last = &transSet_[0] + transSet_.size();
-      if (it - &transSet_[0] >= firstWrite_) {
-	for (auto it2 = it+1;
-	     it2 != trans_last && it2->same_item(*it);
-	     ++it2) {
-	  if (it2->has_write()) {
-	    has_write = true;
-	    break;
-	  }
-	}
-      } else {
-	for (auto it2 = &transSet_[0] + firstWrite_; it2 != trans_last; ++it2) {
-	  if (it2->same_item(*it) && it2->has_write()) {
-	    has_write = true;
-	    break;
-	  }
+      auto perm_end = permute + perm_size;
+      for (auto it2 = permute; it2 != perm_end; ++it2) {
+	if (transSet_[*it2].same_item(*it) && transSet_[*it2].has_write()) {
+	  has_write = true;
+	  break;
 	}
       }
     }
@@ -216,24 +205,39 @@ public:
 
     if (firstWrite_ == -1) firstWrite_ = transSet_.size();
 
+    //    int permute[transSet_.size() - firstWrite_];
+    /*int*/ perm_size = 0;
+    auto begin = &transSet_[0];
+    auto end = begin + transSet_.size();
+    for (auto it = begin + firstWrite_; it != end; ++it) {
+      if (it->has_write()) {
+	permute[perm_size++] = it - begin;
+      }
+    }
+
     //phase1
     if (readMyWritesOnly_) {
       std::sort(transSet_.begin()+firstWrite_, transSet_.end());
     } else {
-      std::stable_sort(transSet_.begin()+firstWrite_, transSet_.end());
+      std::sort(permute, permute + perm_size, [&] (int i, int j) {
+	  return transSet_[i] < transSet_[j];
+	});
     }
     TransItem* trans_first = &transSet_[0];
     TransItem* trans_last = trans_first + transSet_.size();
-    for (auto it = trans_first + firstWrite_; it != trans_last; )
-      if (it->has_write()) {
-        TransItem* me = it;
+
+    auto perm_end = permute + perm_size;
+    for (auto it = permute; it != perm_end; ) {
+      TransItem *me = &transSet_[*it];
+      if (me->has_write()) {
         me->sharedObj()->lock(*me);
         ++it;
         if (!readMyWritesOnly_)
-          for (; it != trans_last && it->same_item(*me); ++it)
+          for (; it != perm_end && transSet_[*it].same_item(*me); ++it)
             /* do nothing */;
       } else
         ++it;
+    }
 
     /* fence(); */
 
@@ -262,16 +266,17 @@ public:
     
   end:
 
-    for (auto it = trans_first + firstWrite_; it != trans_last; )
-      if (it->has_write()) {
-        TransItem* me = it;
+    for (auto it = permute; it != perm_end; ) {
+      TransItem *me = &transSet_[*it];
+      if (me->has_write()) {
         me->sharedObj()->unlock(*me);
         ++it;
         if (!readMyWritesOnly_)
-          for (; it != trans_last && it->same_item(*me); ++it)
+          for (; it != perm_end && transSet_[*it].same_item(*me); ++it)
             /* do nothing */;
       } else
         ++it;
+    }
     
     if (success) {
       commitSuccess();
@@ -317,6 +322,8 @@ private:
 
 private:
   TransSet transSet_;
+  int permute[INIT_SET_SIZE];
+  int perm_size;
   bool readMyWritesOnly_;
   bool isAborted_;
   int16_t firstWrite_;
