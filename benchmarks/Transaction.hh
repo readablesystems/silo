@@ -184,6 +184,7 @@ public:
     if (!has_write) {
       auto perm_end = permute + perm_size;
       for (auto it2 = permute; it2 != perm_end; ++it2) {
+	__builtin_prefetch(&transSet_[*(it2+1)]);
 	if (transSet_[*it2].same_item(*it) && transSet_[*it2].has_write()) {
 	  has_write = true;
 	  break;
