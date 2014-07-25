@@ -104,7 +104,7 @@ public:
   typedef std::vector<TransItem> TransSet;
 #endif
 
-  Transaction() : transSet_(), readMyWritesOnly_(true), isAborted_(false) {
+  Transaction() : transSet_(), readMyWritesOnly_(true), isAborted_(false), firstWrite_(-1) {
 #if !LOCAL_VECTOR
     transSet_.reserve(INIT_SET_SIZE);
 #endif
@@ -161,6 +161,8 @@ public:
 
   template <typename T>
   void add_write(TransItem& ti, T wdata) {
+    if (firstWrite_ < 0)
+      firstWrite_ = &ti - &transSet_[0];
     // TODO: add firstWrites optimization again
     ti._add_write(std::move(wdata));
   }
@@ -179,14 +181,23 @@ public:
   bool check_for_write(TransItem& item) {
     auto it = &item;
     bool has_write = it->has_write();
-    if (!has_write && !this->readMyWritesOnly_) {
+    if (!has_write) {
       auto trans_last = &transSet_[0] + transSet_.size();
-      for (auto it2 = it+1;
-	   it2 != trans_last && it2->same_item(*it);
-	   ++it2) {
-	if (it2->has_write()) {
-	  has_write = true;
-	  break;
+      if (it - &transSet_[0] >= firstWrite_) {
+	for (auto it2 = it+1;
+	     it2 != trans_last && it2->same_item(*it);
+	     ++it2) {
+	  if (it2->has_write()) {
+	    has_write = true;
+	    break;
+	  }
+	}
+      } else {
+	for (auto it2 = &transSet_[0] + firstWrite_; it2 != trans_last; ++it2) {
+	  if (it2->same_item(*it) && it2->has_write()) {
+	    has_write = true;
+	    break;
+	  }
 	}
       }
     }
@@ -203,15 +214,17 @@ public:
     total_n += transSet_.size();
 #endif
 
+    if (firstWrite_ == -1) firstWrite_ = transSet_.size();
+
     //phase1
     if (readMyWritesOnly_) {
-      std::sort(transSet_.begin(), transSet_.end());
+      std::sort(transSet_.begin()+firstWrite_, transSet_.end());
     } else {
-      std::stable_sort(transSet_.begin(), transSet_.end());
+      std::stable_sort(transSet_.begin()+firstWrite_, transSet_.end());
     }
     TransItem* trans_first = &transSet_[0];
     TransItem* trans_last = trans_first + transSet_.size();
-    for (auto it = trans_first; it != trans_last; )
+    for (auto it = trans_first + firstWrite_; it != trans_last; )
       if (it->has_write()) {
         TransItem* me = it;
         me->sharedObj()->lock(*me);
@@ -237,7 +250,8 @@ public:
       }
     
     //phase3
-    for (TransItem& ti : transSet_) {
+    for (auto it = trans_first + firstWrite_; it != trans_last; ++it) {
+      TransItem& ti = *it;
       if (ti.has_write()) {
 #if PERF_LOGGING
         total_w++;
@@ -248,7 +262,7 @@ public:
     
   end:
 
-    for (auto it = trans_first; it != trans_last; )
+    for (auto it = trans_first + firstWrite_; it != trans_last; )
       if (it->has_write()) {
         TransItem* me = it;
         me->sharedObj()->unlock(*me);
@@ -305,7 +319,7 @@ private:
   TransSet transSet_;
   bool readMyWritesOnly_;
   bool isAborted_;
-
+  int16_t firstWrite_;
 };
 
 threadinfo_t Transaction::tinfo[MAX_THREADS];
