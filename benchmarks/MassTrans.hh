@@ -560,7 +560,7 @@ public:
     }
     if (!we_inserted(item)) {
       value_type& v = item.template write_value<value_type>();
-      e->value = std::move(v);
+      e->value.assign(v.data(), v.length());
     }
     // also marks valid if needed
     inc_version(e->version);
@@ -584,10 +584,8 @@ public:
 #endif
     if (we_inserted(item) || has_delete(item))
       free_packed<std::string>(item.data.wdata);
-#if 0
     else if (item.has_write())
       free_packed<value_type>(item.data.wdata);
-#endif
   }
 
   bool remove(const Str& key, threadinfo_type& ti = mythreadinfo) {
@@ -695,9 +693,8 @@ private:
 #if PERF_LOGGING
 	ref_mallocs++;
 #endif
-      // TODO: not using refcounting here and making our own copy leads to a pretty big (almost 10%) speedup.
-      // but this is something that only works for strings so we need to change this code to not be string specific...
-      t.add_write(item, std::string(value.data(), value.length()));
+      // TODO: what exactly is different between using std::move here vs not??
+      t.add_write(item, std::move(value));
     }
     return true;
   }
