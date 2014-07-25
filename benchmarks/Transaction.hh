@@ -176,6 +176,23 @@ public:
     ti._add_afterC();
   }
 
+  bool check_for_write(TransItem& item) {
+    auto it = &item;
+    bool has_write = it->has_write();
+    if (!has_write && !this->readMyWritesOnly_) {
+      auto trans_last = &transSet_[0] + transSet_.size();
+      for (auto it2 = it+1;
+	   it2 != trans_last && it2->same_item(*it);
+	   ++it2) {
+	if (it2->has_write()) {
+	  has_write = true;
+	  break;
+	}
+      }
+    }
+    return has_write;
+  }
+
   bool commit() {
     if (isAborted_)
       return false;
@@ -213,18 +230,7 @@ public:
 #if PERF_LOGGING
         total_r++;
 #endif
-        bool has_write = it->has_write();
-        if (!has_write && !readMyWritesOnly_) {
-          for (auto it2 = it+1;
-               it2 != trans_last && it2->same_item(*it);
-               ++it2) {
-            if (it2->has_write()) {
-              has_write = true;
-              break;
-            }
-	  }
-	}
-        if (!it->sharedObj()->check(*it, has_write)) {
+        if (!it->sharedObj()->check(*it, *this)) {
           success = false;
           goto end;
         }

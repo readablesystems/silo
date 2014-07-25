@@ -514,7 +514,7 @@ public:
   void unlock(TransItem& item) {
     unlock(unpack<versioned_value*>(item.key()));
   }
-  bool check(TransItem& item, bool isReadWrite) {
+  bool check(TransItem& item, Transaction& t) {
     if (is_inter(item.key())) {
       auto n = untag_inter(unpack<leaf_type*>(item.key()));
       auto cur_version = n->full_version_value();
@@ -527,17 +527,16 @@ public:
 #endif
       return cur_version == read_version;
         //&& !(cur_version & (unlocked_cursor_type::nodeversion_type::traits_type::lock_bit));
-      
     }
     auto e = unpack<versioned_value*>(item.key());
     auto read_version = item.template read_value<Version>();
     //    if (read_version != e->version)
     //printf("leaf versions disagree: %d vs %d\n", e->version, read_version);
     bool valid = validityCheck(item, e);
-    bool lockedCheck = isReadWrite || !is_locked(e->version);
-    if (!(valid && lockedCheck))
+    if (!valid)
       return false;
-    return (read_version & valid_check_only_bit) || versionCheck(read_version, e->version);
+    bool lockedCheck = !is_locked(e->version) || t.check_for_write(item);
+    return lockedCheck && ((read_version & valid_check_only_bit) || versionCheck(read_version, e->version));
   }
   void install(TransItem& item) {
     assert(!is_inter(item.key()));
