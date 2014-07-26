@@ -797,8 +797,8 @@ private:
 #endif
       if (String)
 	// TODO: this seems to provide maybe a slight speedup BUT is probably not remotely thread-safe so we should probably just do the assign
-	val = e->value;
-	//val.assign(e->value.data(), std::min(e->value.length(), max_read));
+	//val = e->value;
+	val.assign(e->value.data(), std::min(e->value.length(), max_read));
       else
 	val = e->value;
       fence();
