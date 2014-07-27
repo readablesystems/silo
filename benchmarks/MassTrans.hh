@@ -560,6 +560,9 @@ public:
 #endif
 
   void lock(versioned_value *e) {
+#if NOSORT
+    if (!is_locked(e->version()))
+#endif
     lock(&e->version());
   }
   void unlock(versioned_value *e) {
@@ -593,7 +596,11 @@ public:
     bool valid = validityCheck(item, e);
     if (!valid)
       return false;
+#if NOSORT
+    bool lockedCheck = true;
+#else
     bool lockedCheck = !is_locked(e->version()) || t.check_for_write(item);
+#endif
     return lockedCheck && ((read_version & valid_check_only_bit) || versionCheck(read_version, e->version()));
   }
   void install(TransItem& item) {

@@ -7,6 +7,8 @@
 #define LOCAL_VECTOR 1
 #define PERF_LOGGING 0
 
+#define NOSORT 0
+
 #define MAX_THREADS 8
 
 #if LOCAL_VECTOR
@@ -227,6 +229,7 @@ public:
     }
 
     //phase1
+#if !NOSORT
     if (readMyWritesOnly_) {
       std::sort(transSet_.begin()+firstWrite_, transSet_.end());
     } else {
@@ -234,6 +237,7 @@ public:
 	  return transSet_[i] < transSet_[j];
 	});
     }
+#endif
     TransItem* trans_first = &transSet_[0];
     TransItem* trans_last = trans_first + transSet_.size();
 
