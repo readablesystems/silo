@@ -23,7 +23,7 @@ public:
   bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	bool ret = mbta.transGet<true>(t, key, value, max_bytes_read);
+	bool ret = mbta.transGet(t, key, value, max_bytes_read);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
 	return ret;
 	  });
@@ -61,8 +61,10 @@ public:
             scan_callback &callback,
             str_arena *arena = nullptr) {
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, mbta_type::value_type& value) {
-          return callback.invoke(key.data(), key.length(), value);
+    STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, versioned_str* value) {
+	  auto *s = (*arena)();
+	  s->assign(value->data(), value->length());
+          return callback.invoke(key.data(), key.length(), *s);
         }));
   }
 
@@ -74,8 +76,10 @@ public:
              str_arena *arena = nullptr) {
 #if 1
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transRQuery(t, start_key, end, [&] (mbta_type::Str key, mbta_type::value_type& value) {
-          return callback.invoke(key.data(), key.length(), value);
+    STD_OP(mbta.transRQuery(t, start_key, end, [&] (mbta_type::Str key, versioned_str* value) {
+	  auto *s = (*arena)();
+	  s->assign(value->data(), value->length());
+          return callback.invoke(key.data(), key.length(), *s);
         }));
 #endif
   }
@@ -93,7 +97,7 @@ public:
 
 private:
   friend class mbta_wrapper;
-  typedef MassTrans<std::string> mbta_type;
+  typedef MassTrans<versioned_str> mbta_type;
   mbta_type mbta;
 
   const std::string name;

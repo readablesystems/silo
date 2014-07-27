@@ -9,7 +9,8 @@
 #include "../masstree/masstree_scan.hh"
 #include "../masstree/string.hh"
 #include "Transaction.hh"
-#include "chunked.hh"
+
+#include "stuffed_str.hh"
 
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
@@ -144,6 +145,70 @@ private:
 
 #endif
 
+typedef stuffed_str<uint32_t> versioned_str;
+
+  template <typename T>
+  struct versioned_value_struct /*: public threadinfo::rcu_callback*/ {
+    uint32_t version_;
+    T value;
+
+    static versioned_value_struct* make() {
+      return new versioned_value_struct<T>();
+    }
+
+    inline void set_value(const T& v) {
+      value = v;
+    }
+
+    inline void read_value(T& v) {
+      v = value;
+    }
+
+    inline uint32_t& version() {
+      return version_;
+    }
+
+    void print(FILE* f, const char* prefix,
+               int indent, lcdf::Str key, kvtimestamp_t,
+               char* suffix) {
+      fprintf(f, "%s%*s%.*s = %s%s (version %d)\n", prefix, indent, "", key.len, key.s, value.data(), suffix, version);
+    }
+    
+#if 0
+    // rcu_callback method to self-destruct ourself
+    void operator()(threadinfo& ti) {
+      // this will call value's destructor
+      this->versioned_value_struct::~versioned_value_struct();
+      // and free our memory too
+      ti.deallocate(this, sizeof(versioned_value_struct), memtag_value);
+    }
+#endif
+  };
+  
+  template <>
+  struct versioned_value_struct<versioned_str> : versioned_str {
+    // we define this so we can compile with code that uses default versioned_value_struct
+    static versioned_value_struct<versioned_str>* make() { ALWAYS_ASSERT(0); return NULL; }
+
+    template <typename StringType>
+    inline void set_value(const StringType& v) {
+      auto ptr = this->replace(v.data(), v.length(), malloc);
+      if (ptr) {
+	//	ALWAYS_ASSERT(0);
+      }
+    }
+
+    // responsibility is on the caller of this method to make sure this read is atomic
+    template <typename StringType>
+    inline void read_value(StringType &v) {
+      v.assign(this->data(), this->length());
+    }
+    
+    inline uint32_t& version() {
+      return stuff();
+    }
+  };
+
 template <typename V>
 class MassTrans : public Shared {
 public:
@@ -155,34 +220,20 @@ public:
     threadinfo *ti;
   };
 
-  typedef V value_type;
+  typedef typename std::conditional<std::is_same<V,versioned_str>::value, std::string, V>::type value_type;
   typedef ti_wrapper threadinfo_type;
   typedef Masstree::Str Str;
+
+  typedef uint32_t Version;
 
   static __thread threadinfo_type mythreadinfo;
 
 private:
-  typedef uint32_t Version;
-  struct versioned_value /*: public threadinfo::rcu_callback*/ {
-    Version version;
-    value_type value;
 
-    void print(FILE* f, const char* prefix,
-               int indent, Str key, kvtimestamp_t,
-               char* suffix) {
-      fprintf(f, "%s%*s%.*s = %s%s (version %d)\n", prefix, indent, "", key.len, key.s, value.data(), suffix, version);
-    }
-    
-    // rcu_callback method to self-destruct ourself
-    void operator()(threadinfo& ti) {
-      // this will call value's destructor
-      this->versioned_value::~versioned_value();
-      // and free our memory too
-      ti.deallocate(this, sizeof(versioned_value), memtag_value);
-    }
-  };
-
+  typedef versioned_value_struct<V> versioned_value;
+  
 public:
+
   MassTrans() {
 #if RCU
     if (!mythreadinfo.ti) {
@@ -217,24 +268,27 @@ public:
   }
 
   bool put(Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
+#if 0
     cursor_type lp(table_, key);
     bool found = lp.find_insert(*ti.ti);
     if (found) {
-      lock(&lp.value()->version);
+      lock(&lp.value()->version());
     } else {
       auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
-      lp.value() = new(p) versioned_value;
+      lp.value() = new(p) versioned_value<V>;
     }
     // this will uses value's copy constructor (TODO: just doing this may be unsafe and we should be using rcu for dealloc)
     lp.value()->value = value;
     if (found) {
-      inc_version(lp.value()->version);
-      unlock(&lp.value()->version);
+      inc_version(lp.value()->version());
+      unlock(&lp.value()->version());
     } else {
-      lp.value()->version = 0;
+      lp.value()->version() = 0;
     }
     lp.finish(1, *ti.ti);
     return found;
+#endif
+    return false;
   }
 
   bool get(Str key, value_type& value, threadinfo_type& ti = mythreadinfo) {
@@ -245,20 +299,20 @@ public:
     return found;
   }
 
-  template <bool String = false>
-  /*__attribute__((flatten))*/ bool transGet(Transaction& t, Str key, value_type& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
+  template <typename StringType>
+  /*__attribute__((flatten))*/ bool transGet(Transaction& t, Str key, StringType& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
       versioned_value *e = lp.value();
       //      __builtin_prefetch(&e->version);
       auto& item = t.add_item(this, e);
-      if (e->version & invalid_bit){//!validityCheck(item, e)) {
+      if (e->version() & invalid_bit){//!validityCheck(item, e)) {
         t.abort();
         return false;
       }
       //      __builtin_prefetch();
-      __builtin_prefetch(e->value.data() - sizeof(std::string::size_type)*3);
+      //__builtin_prefetch(e->value.data() - sizeof(std::string::size_type)*3);
 #if 0 /* we're not reading our writes anyway */
       if (has_delete(item)) {
         return false;
@@ -275,7 +329,7 @@ public:
       }
 #endif
       Version elem_vers;
-      atomicRead<String>(e, elem_vers, retval, max_read);
+      atomicRead(e, elem_vers, retval, max_read);
       if (!item.has_read() || item.template read_value<Version>() & valid_check_only_bit) {
         t.add_read(item, elem_vers);
       }
@@ -292,7 +346,7 @@ public:
     if (found) {
       versioned_value *e = lp.value();
       auto& item = t.add_item(this, e);
-      bool valid = !(e->version & invalid_bit);
+      bool valid = !(e->version() & invalid_bit);
 #if 0
       if (!valid && we_inserted(item)) {
         if (has_delete(item)) {
@@ -335,7 +389,7 @@ if (!valid) {
   }
 
   template <bool INSERT = true, bool SET = true, typename StringType>
-  bool transPut(Transaction& t, StringType key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
+  bool transPut(Transaction& t, StringType key, const StringType& value, threadinfo_type& ti = mythreadinfo) {
     // optimization to do an unlocked lookup first
     if (SET) {
       unlocked_cursor_type lp(table_, key);
@@ -363,10 +417,14 @@ if (!valid) {
       ref_mallocs++;
 #endif
       //      auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
-      versioned_value* val = new(versioned_value_alloc.next()) versioned_value;
-      // copy
-      val->value.assign(value.data(), value.length());
-      val->version = invalid_bit;
+      versioned_value* val;
+      if (is_versioned_str()) {
+	val = (versioned_value*)versioned_str::make(value.data(), value.length(), invalid_bit, malloc);
+      } else {
+	val = versioned_value::make();
+	val->set_value(value);
+	val->version() = invalid_bit;
+      }
       fence();
       lp.value() = val;
 #if ABORT_ON_WRITE_READ_CONFLICT
@@ -399,12 +457,12 @@ if (!valid) {
   }
 
   template <typename StringType>
-  bool transUpdate(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
+  bool transUpdate(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
     return transPut</*insert*/false, /*set*/true>(t, k, v, ti);
   }
 
   template <typename StringType>
-  bool transInsert(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
+  bool transInsert(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
     return !transPut</*insert*/true, /*set*/false>(t, k, v, ti);
   }
 
@@ -425,8 +483,8 @@ if (!valid) {
     auto value_callback = [&] (Str key, versioned_value* value) {
       auto& item = t.add_item(this, value);
       if (!item.has_read())
-        t.add_read(item, value->version);
-      return callback(key, value->value);
+        t.add_read(item, value->version());
+      return callback(key, value);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback)> scanner(end, node_callback, value_callback);
@@ -441,8 +499,8 @@ if (!valid) {
     auto value_callback = [&] (Str key, versioned_value* value) {
       auto& item = t.add_item(this, value);
       if (!item.has_read())
-        t.add_read(item, value->version);
-      return callback(key, value->value);
+        t.add_read(item, value->version());
+      return callback(key, value);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback), true> scanner(end, node_callback, value_callback);
@@ -502,10 +560,10 @@ public:
 #endif
 
   void lock(versioned_value *e) {
-    lock(&e->version);
+    lock(&e->version());
   }
   void unlock(versioned_value *e) {
-    unlock(&e->version);
+    unlock(&e->version());
   }
 
   void lock(TransItem& item) {
@@ -535,17 +593,17 @@ public:
     bool valid = validityCheck(item, e);
     if (!valid)
       return false;
-    bool lockedCheck = !is_locked(e->version) || t.check_for_write(item);
-    return lockedCheck && ((read_version & valid_check_only_bit) || versionCheck(read_version, e->version));
+    bool lockedCheck = !is_locked(e->version()) || t.check_for_write(item);
+    return lockedCheck && ((read_version & valid_check_only_bit) || versionCheck(read_version, e->version()));
   }
   void install(TransItem& item) {
     assert(!is_inter(item.key()));
     auto e = unpack<versioned_value*>(item.key());
-    assert(is_locked(e->version));
+    assert(is_locked(e->version()));
     if (has_delete(item)) {
       if (!we_inserted(item)) {
-        assert(!(e->version & invalid_bit));
-        e->version |= invalid_bit;
+        assert(!(e->version() & invalid_bit));
+        e->version() |= invalid_bit;
         fence();
       }
       // TODO: hashtable did this in afterC, we're doing this now, unclear really which is better
@@ -560,10 +618,10 @@ public:
     }
     if (!we_inserted(item)) {
       value_type& v = item.template write_value<value_type>();
-      e->value.assign(v.data(), v.length());
+      e->set_value(v);
     }
     // also marks valid if needed
-    inc_version(e->version);
+    inc_version(e->version());
   }
 
   void undo(TransItem& item) {
@@ -663,6 +721,7 @@ private:
       t.abort();
       return false;
     }
+#if 0
     if (has_delete(item)) {
       // delete-then-insert == update (technically v# would get set to 0, but this doesn't matter
       // if user can't read v#)
@@ -680,20 +739,27 @@ private:
       return false;
     }
     // make sure this item doesn't get deleted (we don't care about other updates to it though)
-    if (!item.has_read() && !we_inserted(item)) {
+    if (!item.has_read() && !we_inserted(item))
+#endif
+      {
       t.add_read(item, valid_check_only_bit);
     }
     if (SET) {
+#if 0
       // if we're inserting this element already we can just update the value we're inserting
       if (we_inserted(item))
 	// copy
         e->value = value;
       else
+#endif
 	// copy
 #if PERF_LOGGING
 	ref_mallocs++;
 #endif
       // TODO: what exactly is different between using std::move here vs not??
+      if (is_versioned_str() && e->needs_resize(value.length())) {
+	//	printf("need: %lu have: %d\n", value.length(), e->capacity());
+      }
       t.add_write(item, std::move(value));
     }
     return true;
@@ -731,7 +797,7 @@ private:
 
   bool validityCheck(TransItem& item, versioned_value *e) {
     return //likely(we_inserted(item)) || !(e->version & invalid_bit);
-      likely(!(e->version & invalid_bit)) || we_inserted(item);
+      likely(!(e->version() & invalid_bit)) || we_inserted(item);
   }
 
   static constexpr Version lock_bit = 1U<<(sizeof(Version)*8 - 1);
@@ -786,24 +852,22 @@ private:
     *v = cur;
   }
 
-  template <bool String = false>
   void atomicRead(versioned_value *e, Version& vers, value_type& val, size_t max_read = (size_t)-1) {
     Version v2;
     do {
-      vers = e->version;
+      vers = e->version();
       fence();
 #if PERF_LOGGING
       read_mallocs++;
 #endif
-      if (String)
-	// TODO: this seems to provide maybe a slight speedup BUT is probably not remotely thread-safe so we should probably just do the assign
-	//val = e->value;
-	val.assign(e->value.data(), std::min(e->value.length(), max_read));
-      else
-	val = e->value;
+      e->read_value(val);
       fence();
-      v2 = e->version;
+      v2 = e->version();
     } while (vers != v2);
+  }
+
+  static constexpr bool is_versioned_str() {
+    return std::is_same<V, versioned_str>::value;
   }
 
   struct table_params : public Masstree::nodeparams<15,15> {
@@ -816,11 +880,13 @@ private:
   typedef Masstree::tcursor<table_params> cursor_type;
   typedef Masstree::leaf<table_params> leaf_type;
   table_type table_;
-  chunked<versioned_value> versioned_value_alloc;
 };
 
 template <typename V>
 __thread typename MassTrans<V>::threadinfo_type MassTrans<V>::mythreadinfo;
+
+template <typename V>
+constexpr typename MassTrans<V>::Version MassTrans<V>::invalid_bit;
 
 volatile uint64_t globalepoch;
 volatile bool recovering;
