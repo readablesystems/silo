@@ -145,15 +145,15 @@ public:
   // tries to find an existing item with this key, returns NULL if not found
   template <typename T>
   TransItem* has_item(Shared *s, T key) {
-    // ehhh
     if (firstWrite_ == -1) return NULL;
     // TODO: the semantics here are wrong. this all works fine if key if just some opaque pointer (which it sorta has to be anyway)
     // but if it wasn't, we'd be doing silly copies here, AND have totally incorrect behavior anyway because k would be a unique
     // pointer and thus not comparable to anything in the transSet. We should either actually support custom key comparisons
     // or enforce that key is in fact trivially copyable/one word
     void *k = pack(key);
-    for (auto it = transSet_.begin() + firstWrite_; it != transSet_.end(); ++it) {
-      TransItem& ti = *it;
+    auto end = permute + perm_size;
+    for (auto it = permute; it != end; ++it) {
+      TransItem& ti = transSet_[*it];
 #if PERF_LOGGING
       total_searched++;
 #endif
@@ -167,8 +167,10 @@ public:
   template <typename T>
   void add_write(TransItem& ti, T wdata) {
     if (firstWrite_ < 0)
-      firstWrite_ = &ti - &transSet_[0];
-    // TODO: add firstWrites optimization again
+      firstWrite_ = item_index(ti);
+    if (!ti.has_write()) {
+      permute[perm_size++] = item_index(ti);
+    }
     ti._add_write(std::move(wdata));
   }
   template <typename T>
@@ -181,6 +183,10 @@ public:
 
   void add_afterC(TransItem& ti) {
     ti._add_afterC();
+  }
+  
+  unsigned item_index(const TransItem& item) {
+    return &item - &transSet_[0];
   }
 
   bool check_for_write(TransItem& item) {
@@ -223,6 +229,7 @@ public:
 
     //    int permute[transSet_.size() - firstWrite_];
     /*int*/ perm_size = 0;
+#if 0
     auto begin = &transSet_[0];
     auto end = begin + transSet_.size();
     for (auto it = begin + firstWrite_; it != end; ++it) {
@@ -230,6 +237,7 @@ public:
 	permute[perm_size++] = it - begin;
       }
     }
+#endif
 
     //phase1
 #if !NOSORT
