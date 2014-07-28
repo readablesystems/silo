@@ -145,12 +145,15 @@ public:
   // tries to find an existing item with this key, returns NULL if not found
   template <typename T>
   TransItem* has_item(Shared *s, T key) {
+    // ehhh
+    if (firstWrite_ == -1) return NULL;
     // TODO: the semantics here are wrong. this all works fine if key if just some opaque pointer (which it sorta has to be anyway)
     // but if it wasn't, we'd be doing silly copies here, AND have totally incorrect behavior anyway because k would be a unique
     // pointer and thus not comparable to anything in the transSet. We should either actually support custom key comparisons
     // or enforce that key is in fact trivially copyable/one word
     void *k = pack(key);
-    for (TransItem& ti : transSet_) {
+    for (auto it = transSet_.begin() + firstWrite_; it != transSet_.end(); ++it) {
+      TransItem& ti = *it;
 #if PERF_LOGGING
       total_searched++;
 #endif
@@ -183,7 +186,7 @@ public:
   bool check_for_write(TransItem& item) {
     auto it = &item;
     bool has_write = it->has_write();
-    if (!has_write) {
+    if (!has_write /*&& (!readMyWritesOnly_ || ((unsigned)firstWrite_ != transSet_.size() && it - &transSet_[0] < (unsigned)firstWrite_))*/) {
       has_write = std::binary_search(permute, permute + perm_size, -1, [&] (const int& i, const int& j) {
 	  auto& e1 = unlikely(i < 0) ? item : transSet_[i];
 	  auto& e2 = likely(j < 0) ? item : transSet_[j];
@@ -230,13 +233,9 @@ public:
 
     //phase1
 #if !NOSORT
-    if (readMyWritesOnly_) {
-      std::sort(transSet_.begin()+firstWrite_, transSet_.end());
-    } else {
-      std::sort(permute, permute + perm_size, [&] (int i, int j) {
-	  return transSet_[i] < transSet_[j];
-	});
-    }
+    std::sort(permute, permute + perm_size, [&] (int i, int j) {
+	return transSet_[i] < transSet_[j];
+      });
 #endif
     TransItem* trans_first = &transSet_[0];
     TransItem* trans_last = trans_first + transSet_.size();

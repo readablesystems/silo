@@ -15,6 +15,8 @@
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
 
+#define READ_MY_WRITES 1
+
 #if PERF_LOGGING
 uint64_t node_aborts;
 uint64_t version_mallocs;
@@ -306,24 +308,24 @@ public:
     if (found) {
       versioned_value *e = lp.value();
       //      __builtin_prefetch(&e->version);
-      auto& item = t.add_item(this, e);
-      if (e->version() & invalid_bit){//!validityCheck(item, e)) {
+      auto& item = t_item(t, e);
+      if (!validityCheck(item, e)) {
         t.abort();
         return false;
       }
       //      __builtin_prefetch();
       //__builtin_prefetch(e->value.data() - sizeof(std::string::size_type)*3);
-#if 0 /* we're not reading our writes anyway */
+#if READ_MY_WRITES
       if (has_delete(item)) {
         return false;
       }
       if (item.has_write()) {
         // read directly from the element if we're inserting it
-	auto& val = we_inserted(item) ? e->value : item.template write_value<value_type>();
-	if (String) {
-	  retval.assign(val.data(), std::min(val.length(), max_read));
+	if (we_inserted(item)) {
+	  e->read_value(retval);
 	} else {
-	  retval = val;
+	  // TODO: should we refcount, copy, or...?
+	  retval = item.template write_value<value_type>();
 	}
         return true;
       }
@@ -345,9 +347,9 @@ public:
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
       versioned_value *e = lp.value();
-      auto& item = t.add_item(this, e);
+      auto& item = t_item(t, e);
       bool valid = !(e->version() & invalid_bit);
-#if 0
+#if READ_MY_WRITES
       if (!valid && we_inserted(item)) {
         if (has_delete(item)) {
           // insert-then-delete then delete, so second delete should return false
@@ -359,12 +361,12 @@ public:
         return true;
       } else 
 #endif
-if (!valid) {
+     if (!valid) {
         t.abort();
         return false;
       }
       assert(valid);
-#if 0
+#if READ_MY_WRITES
       // already deleted!
       if (has_delete(item)) {
         return false;
@@ -474,14 +476,14 @@ if (!valid) {
   }
 
   // range queries
-#if 1
   template <typename Callback>
   void transQuery(Transaction& t, Str begin, Str end, Callback callback, threadinfo_type& ti = mythreadinfo) {
     auto node_callback = [&] (leaf_type* node, typename unlocked_cursor_type::nodeversion_value_type version) {
       this->ensureNotFound(t, node, version);
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
-      auto& item = t.add_item(this, value);
+      // TODO: this needs to read my writes
+      auto& item = this->t_item(t, value);
       if (!item.has_read())
         t.add_read(item, value->version());
       return callback(key, value);
@@ -497,7 +499,7 @@ if (!valid) {
       this->ensureNotFound(t, node, version);
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
-      auto& item = t.add_item(this, value);
+      auto& item = this->t_item(t, value);
       if (!item.has_read())
         t.add_read(item, value->version());
       return callback(key, value);
@@ -556,8 +558,6 @@ private:
     Valuecallback valuecallback_;
   };
 public:
-
-#endif
 
   void lock(versioned_value *e) {
 #if NOSORT
@@ -723,12 +723,12 @@ public:
 private:
   template <bool INSERT=true, bool SET=true>
   bool handlePutFound(Transaction& t, versioned_value *e, const value_type& value) {
-    auto& item = t.add_item(this, e);
+    auto& item = t_item(t, e);
     if (!validityCheck(item, e)) {
       t.abort();
       return false;
     }
-#if 0
+#if READ_MY_WRITES
     if (has_delete(item)) {
       // delete-then-insert == update (technically v# would get set to 0, but this doesn't matter
       // if user can't read v#)
@@ -736,7 +736,7 @@ private:
         item.set_flags(0);
         assert(!has_delete(item));
         if (we_inserted(item))
-          e->value = value;
+          e->set_value(value);
         else
           t.add_write(item, value);
       } else {
@@ -752,22 +752,25 @@ private:
       t.add_read(item, valid_check_only_bit);
     }
     if (SET) {
-#if 0
+#if READ_MY_WRITES
       // if we're inserting this element already we can just update the value we're inserting
       if (we_inserted(item))
 	// copy
-        e->value = value;
+        e->set_value(value);
       else
 #endif
+	{
 	// copy
 #if PERF_LOGGING
+	  // TODO: none of these are right anymore
 	ref_mallocs++;
 #endif
-      // TODO: what exactly is different between using std::move here vs not??
       if (is_versioned_str() && e->needs_resize(value.length())) {
 	//	printf("need: %lu have: %d\n", value.length(), e->capacity());
       }
+      // TODO: what exactly is different between using std::move here vs not??
       t.add_write(item, std::move(value));
+	}
     }
     return true;
   }
@@ -775,7 +778,7 @@ private:
   template <typename NODE, typename VERSION>
   void ensureNotFound(Transaction& t, NODE n, VERSION v) {
     // TODO: could be more efficient to use add_item here, but that will also require more work for read-then-insert
-    auto& item = t.add_item(this, tag_inter(n));
+    auto& item = t_item(t, tag_inter(n));
     if (!item.has_read()) {
       t.add_read(item, v);
     }
@@ -783,7 +786,7 @@ private:
 
   template <typename NODE, typename VERSION>
   bool updateNodeVersion(Transaction& t, NODE *node, VERSION prev_version, VERSION new_version) {
-    return false;
+#if READ_MY_WRITES
     auto node_item = t.has_item(this, tag_inter(node));
     if (node_item) {
       if (node_item->has_read() &&
@@ -792,8 +795,19 @@ private:
         return true;
       }
     }
+#endif
     return false;
   }
+
+  template <typename T>
+  TransItem& t_item(Transaction& t, T e) {
+#if READ_MY_WRITES
+    return t.item(this, e);
+#else
+    return t.add_item(this, e);
+#endif
+  }
+
 
   bool we_inserted(TransItem& item) {
     return item.has_undo();
