@@ -22,6 +22,7 @@ MANY_THREADED="--num-threads %d --scale-factor %d " % (NTHREADS, NTHREADS)
 MBTA="-dmbta "
 SILO="--disable-snapshots --disable-gc "
 TPCC = '--bench tpcc '
+YCSB = '--bench ycsb '
 
 TYPES = ['neworder', 'payment', 'delivery', 'orderstatus', 'stocklevel']
 
@@ -90,9 +91,8 @@ def nostablesort(testtype, threads, fileobj):
     run_test('no stable sort', testtype, MBTA, threads, fileobj)
     nostablesort_revoke()
 
-def stdtest(f, testtype, threads):
+def stdtest(f, testtype, threads, testname):
     singlethr = threads==SINGLE_THREADED
-    testname = "45-43-4-4-4" if singlethr else "%d threads" % NTHREADS
     f.write(testname + '\n')
     us_and_silo(testtype, threads, f)
 
@@ -126,13 +126,22 @@ def indiv_tpcc_tests(f, threads):
 def tpcc():
     f = open(OUTPUT_DIR + '/' + 'tpcc', 'w')
 
-    stdtest(f, TPCC, SINGLE_THREADED)
-    stdtest(f, TPCC, MANY_THREADED)
+    stdtest(f, TPCC, SINGLE_THREADED, "45-43-4-4-4")
+    stdtest(f, TPCC, MANY_THREADED, "%d threads" % NTHREADS)
 
     indiv_tpcc_tests(f, SINGLE_THREADED)
 
     f.close()
 
+def ycsb():
+    f = open(OUTPUT_DIR + '/' + 'ycsb', 'w')
+
+    stdtest(f, YCSB, SINGLE_THREADED, "default")
+    stdtest(f, YCSB, MANY_THREADED, "%d threads" % NTHREADS)
+
+    f.close()
+
 simple_run('mkdir ' + OUTPUT_DIR)
 remake()
-tpcc()
+#tpcc()
+ycsb()
