@@ -66,6 +66,13 @@ def ignore_run(c):
 def remake():
     simple_run(MAKE_CMD)
 
+def patch_apply(name):
+    simple_run('patch -p1 < ' + name)
+    remake()
+
+def patch_revoke(name):
+    simple_run('patch -p1 -R < ' + name)
+
 def nosort_apply():
     # this is kinda dumb, we could just pass a -D flag to make probably
     simple_run('patch -p1 < nosort.patch')
@@ -91,15 +98,25 @@ def nostablesort(testtype, threads, fileobj):
     run_test('no stable sort', testtype, MBTA, threads, fileobj)
     nostablesort_revoke()
 
+
+
+def rmw(testtype, threads, fileobj):
+    patch_apply('rmw.patch')
+    run_test('readmywrites', testtype, MBTA, threads, fileobj)
+    patch_revoke('rmw.patch')
+
 def stdtest(f, testtype, threads, testname):
     singlethr = threads==SINGLE_THREADED
     f.write(testname + '\n')
     us_and_silo(testtype, threads, f)
 
+    rmw(testtype, threads, f)
+
     if singlethr:
         # for single threaded we also run a no sort test
         nosort(testtype, threads, f)
-        remake()
+
+    remake()
 
     f.write('\n')
 
@@ -117,9 +134,10 @@ def indiv_tpcc_tests(f, threads):
         f.write(testname + '\n')
         testtype = TPCC + indiv_type(testname)
         us_and_silo(testtype, threads, f)
+        rmw(testtype, threads, f)
         if singlethr:
             nosort(testtype, threads, f)
-            remake()
+        remake()
         f.write('\n')
     
     
@@ -143,5 +161,5 @@ def ycsb():
 
 simple_run('mkdir ' + OUTPUT_DIR)
 remake()
-#tpcc()
-ycsb()
+tpcc()
+#ycsb()
