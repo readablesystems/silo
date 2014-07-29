@@ -15,7 +15,7 @@
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
 
-#define READ_MY_WRITES 1
+#define READ_MY_WRITES 0
 
 #if PERF_LOGGING
 uint64_t node_aborts;
