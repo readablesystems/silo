@@ -43,7 +43,7 @@ def plot(dat, title):
     print data
     
     cur_width = 0
-    colors = ['r', 'g', 'b']
+    colors = ['r', 'g', 'b', 'c']
     n_datapoints = len(data.values()[0].values())
     inds = numpy.arange(n_datapoints)
     n_types = len(data.values())
@@ -56,7 +56,8 @@ def plot(dat, title):
 
     ax.set_xticks(inds + width * n_types / 2.0)
     ax.set_xticklabels(labels, size=10)
-    ax.legend(map(lambda x: x[0], bars), data.keys(), loc='upper center', bbox_to_anchor=(.9, 1.1) )
+    ax.legend(map(lambda x: x[0], bars), data.keys(), ncol=4, loc='upper center')
+#loc='lower center', bbox_to_anchor=(.9, .05) )
 
     ax.set_title(title)
 

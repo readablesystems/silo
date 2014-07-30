@@ -9,8 +9,8 @@ ROUNDS=5
 OTHER_OPTIONS=''
 try:
     # will set these until we run out of arguments
-    RUNTIME = sys.argv[1]
-    ROUNDS = sys.argv[2]
+    RUNTIME = int(sys.argv[1])
+    ROUNDS = int(sys.argv[2])
     OTHER_OPTIONS = sys.argv[3]
 except: pass
 
@@ -161,5 +161,5 @@ def ycsb():
 
 simple_run('mkdir ' + OUTPUT_DIR)
 remake()
-tpcc()
-#ycsb()
+#tpcc()
+ycsb()
