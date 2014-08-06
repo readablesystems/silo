@@ -152,7 +152,7 @@ public:
     // pointer and thus not comparable to anything in the transSet. We should either actually support custom key comparisons
     // or enforce that key is in fact trivially copyable/one word
     void *k = pack(key);
-    for (auto it = transSet_.begin() + firstWrite_; it != transSet_.end(); ++it) {
+    for (auto it = transSet_.begin(); it != transSet_.end(); ++it) {
       TransItem& ti = *it;
 #if PERF_LOGGING
       total_searched++;

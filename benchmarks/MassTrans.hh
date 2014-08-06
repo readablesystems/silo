@@ -909,5 +909,3 @@ __thread typename MassTrans<V>::threadinfo_type MassTrans<V>::mythreadinfo;
 template <typename V>
 constexpr typename MassTrans<V>::Version MassTrans<V>::invalid_bit;
 
-volatile uint64_t globalepoch;
-volatile bool recovering;
