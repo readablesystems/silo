@@ -18,7 +18,8 @@ CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPT
 MAKE_CMD='MODE=perf make -j dbtest'
 SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
 NTHREADS = 24
-MANY_THREADED="--num-threads %d --scale-factor %d " % (NTHREADS, NTHREADS)
+MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
+MANY_THREADED= MANY_THREADS(NTHREADS)
 MBTA="-dmbta "
 SILO="--disable-snapshots --disable-gc "
 TPCC = '--bench tpcc '
@@ -110,13 +111,13 @@ def stdtest(f, testtype, threads, testname):
     f.write(testname + '\n')
     us_and_silo(testtype, threads, f)
 
-    rmw(testtype, threads, f)
+    #rmw(testtype, threads, f)
 
-    if singlethr:
+#    if singlethr:
         # for single threaded we also run a no sort test
-        nosort(testtype, threads, f)
+#        nosort(testtype, threads, f)
 
-    remake()
+    #remake()
 
     f.write('\n')
 
@@ -144,10 +145,11 @@ def indiv_tpcc_tests(f, threads):
 def tpcc():
     f = open(OUTPUT_DIR + '/' + 'tpcc', 'w')
 
-    stdtest(f, TPCC, SINGLE_THREADED, "45-43-4-4-4")
-    stdtest(f, TPCC, MANY_THREADED, "%d threads" % NTHREADS)
+    stdtest(f, TPCC, SINGLE_THREADED, "1 thread")
+    for i in [8, 16, 24]:
+        stdtest(f, TPCC, MANY_THREADS(i), "%d threads" % i)
 
-    indiv_tpcc_tests(f, SINGLE_THREADED)
+#    indiv_tpcc_tests(f, SINGLE_THREADED)
 
     f.close()
 
@@ -161,5 +163,5 @@ def ycsb():
 
 simple_run('mkdir ' + OUTPUT_DIR)
 remake()
-#tpcc()
-ycsb()
+tpcc()
+#ycsb()
