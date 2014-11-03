@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy
 #import matplotlib
 from collections import OrderedDict
@@ -47,7 +48,7 @@ def plot(dat, title):
             scale_by = None
         else:
             print lines[i], lines[i+1]
-            if not scale_by: scale_by = float(lines[i+1])
+            if not scale_by: scale_by = 1#float(lines[i+1])
             if not data.has_key(lines[i]):
                 data[lines[i]] = OrderedDict()
                 # initialize previously missed values to 0
@@ -62,7 +63,7 @@ def plot(dat, title):
     if COLORZ:
         colors = tableau20
     else:
-        colors = [(1,1,1), (0,0,0), (.5,.5,.5)]
+        colors = [(0,0,0), (.5,.5,.5), (.7,.7,.7)]
     n_datapoints = len(data.values()[0].values())
     inds = numpy.arange(n_datapoints)
     n_types = len(data.values())
@@ -70,16 +71,21 @@ def plot(dat, title):
     bars = []
     for (d, c) in zip(data.values(), colors):
         pts = d.values()
-        bars.append(ax.bar(inds + cur_width, pts, width, color=c))
+        bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c))
         cur_width += width
 
     ax.set_xticks(inds + width * n_types / 2.0)
     ax.set_xticklabels(labels, size=10)
-    ax.set_ylabel('Throughput relative to our system', rotation=90)
-    ax.legend(map(lambda x: x[0], bars), data.keys(), ncol=4, loc='upper right', prop={'size': 10})
+    ax.set_ylabel('Thousands of transactions per second', rotation=90)
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
+    ax.set_aspect(1/900000. * 2)
+    plt.xlim()
+    ax.legend(map(lambda x: x[0], bars), data.keys(), ncol=4, loc='upper left', prop={'size': 10})
 #loc='lower center', bbox_to_anchor=(.9, .05) )
 
     ax.set_title(title)
+
+    plt.tight_layout()
 
     return plt
 
