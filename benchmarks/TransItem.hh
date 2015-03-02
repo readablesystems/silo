@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <string.h>
+#include <assert.h>
 
 #include "Tagged64.hh"
 
@@ -17,7 +18,7 @@ template <bool B> struct packer {};
 template <> struct packer<true> {
   template <typename T>
   void* pack(T value) {
-    void* x;
+    void* x = NULL;
     // yuck. we need to force T's copy constructor to be called at some point so we do this...
     new (&x) T(value);
 
@@ -26,6 +27,8 @@ template <> struct packer<true> {
 
   template <typename T>
   T& unpack(void*& packed) {
+    // TODO: this won't work on big endian
+    // could use memcpy but then can't return a reference
     return reinterpret_cast<T&>(packed);
   }
 
@@ -123,11 +126,20 @@ struct TransItem {
     return data.key;
   }
 
+  template <typename T>
+  T& key() {
+    return unpack<T>(data.key);
+  }
+
+  inline bool operator==(const TransItem& t2) const {
+    return data == t2.data && sharedObj() == t2.sharedObj();
+  }
+
   inline bool operator<(const TransItem& t2) const {
     // we compare keys and THEN shared objects here so that read and write keys with the same value
     // are next to each other
     return data < t2.data
-      || (data == t2.data && shared < t2.shared);
+      || (data == t2.data && sharedObj() < t2.sharedObj());
   }
 
   // TODO: should these be done Transaction methods like their add_ equivalents?

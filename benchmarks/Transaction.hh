@@ -2,7 +2,10 @@
 
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <unistd.h>
+
+#include "config.h"
 
 #define LOCAL_VECTOR 1
 #define PERF_LOGGING 0
@@ -20,13 +23,8 @@
 
 #define INIT_SET_SIZE 512
 
-#if PERF_LOGGING
-uint64_t total_n;
-uint64_t total_r, total_w;
-uint64_t total_searched;
-uint64_t total_aborts;
-uint64_t commit_time_aborts;
-#endif
+void reportPerf();
+#define STO_SHUTDOWN() reportPerf()
 
 struct threadinfo_t {
   unsigned epoch;
@@ -41,6 +39,14 @@ public:
   static threadinfo_t tinfo[MAX_THREADS];
   static __thread int threadid;
   static unsigned global_epoch;
+
+#if PERF_LOGGING
+  static uint64_t total_n, total_r, total_w;
+  static uint64_t total_searched;
+  static uint64_t total_aborts;
+  static uint64_t total_starts;
+  static uint64_t commit_time_aborts;
+#endif
 
   static std::function<void(unsigned)> epoch_advance_callback;
 
@@ -106,23 +112,39 @@ public:
   typedef std::vector<TransItem> TransSet;
 #endif
 
-  Transaction() : transSet_(), readMyWritesOnly_(true), isAborted_(false), firstWrite_(-1) {
+  Transaction() : transSet_(), permute(NULL), perm_size(0), readMyWritesOnly_(true), isAborted_(false), firstWrite_(-1) {
 #if !LOCAL_VECTOR
     transSet_.reserve(INIT_SET_SIZE);
 #endif
     // TODO: assumes this thread is constantly running transactions
     tinfo[threadid].epoch = global_epoch;
     if (tinfo[threadid].trans_start_callback) tinfo[threadid].trans_start_callback();
+#if PERF_LOGGING
+    __sync_add_and_fetch(&total_starts, 1);
+#endif
   }
 
   ~Transaction() {
     tinfo[threadid].epoch = 0;
     if (tinfo[threadid].trans_end_callback) tinfo[threadid].trans_end_callback();
+    if (!isAborted_ && transSet_.size() != 0) {
+      silent_abort();
+    }
+  }
+
+  void consolidateReads() {
+    // TODO: should be stable sort technically, but really we want to use insertion sort
+    auto first = transSet_.begin();
+    auto last = transSet_.end();
+    std::sort(first, last);
+    // takes the first element of any duplicates which is what we want. that is, we want to verify
+    // only the oldest read
+    transSet_.resize(std::unique(first, last) - first);
   }
 
   // adds item without checking its presence in the array
   template <bool NOCHECK = true, typename T>
-  TransItem& add_item(Shared *s, T key) {
+  TransItem& add_item(Shared *s, const T& key) {
     if (NOCHECK) {
       readMyWritesOnly_ = false;
     }
@@ -134,19 +156,37 @@ public:
 
   // tries to find an existing item with this key, otherwise adds it
   template <typename T>
-  TransItem& item(Shared *s, T key) {
+  TransItem& item(Shared *s, const T& key) {
+    TransItem *ti = has_item(s, key);
+    // we use the firstwrite optimization when checking for item(), but do a full check if they call has_item.
+    // kinda jank, ideal I think would be we'd figure out when it's the first write, and at that point consolidate
+    // the set to be doing rmw (and potentially even combine any duplicate reads from earlier)
+
+    if (!ti)
+      ti = &add_item<false>(s, key);
+    return *ti;
+  }
+
+  // gets an item that is intended to be read only. this method essentially allows for duplicate items
+  // in the set in some cases
+  template <typename T>
+  TransItem& read_only_item(Shared *s, const T& key) {
     TransItem *ti;
-    if ((ti = has_item(s, key)))
+    if ((ti = has_item<true>(s, key)))
       return *ti;
 
     return add_item<false>(s, key);
   }
 
   // tries to find an existing item with this key, returns NULL if not found
-  template <typename T>
-  TransItem* has_item(Shared *s, T key) {
-    // ehhh
-    if (firstWrite_ == -1) return NULL;
+  template <bool read_only = false, typename T>
+  TransItem* has_item(Shared *s, const T& key) {
+    if (read_only && firstWrite_ == -1) return NULL;
+
+    if (!read_only && firstWrite_ == -1) {
+      consolidateReads();
+    }
+
     // TODO: the semantics here are wrong. this all works fine if key if just some opaque pointer (which it sorta has to be anyway)
     // but if it wasn't, we'd be doing silly copies here, AND have totally incorrect behavior anyway because k would be a unique
     // pointer and thus not comparable to anything in the transSet. We should either actually support custom key comparisons
@@ -158,17 +198,25 @@ public:
       total_searched++;
 #endif
       if (ti.sharedObj() == s && ti.data.key == k) {
+        if (!read_only && firstWrite_ == -1)
+          firstWrite_ = item_index(ti);
         return &ti;
       }
     }
+    if (!read_only && firstWrite_ == -1)
+      firstWrite_ = transSet_.size();
     return NULL;
+  }
+
+  int item_index(TransItem& ti) {
+    return &ti - &transSet_[0];
   }
 
   template <typename T>
   void add_write(TransItem& ti, T wdata) {
-    if (firstWrite_ < 0)
-      firstWrite_ = &ti - &transSet_[0];
-    // TODO: add firstWrites optimization again
+    auto idx = item_index(ti);
+    if (firstWrite_ < 0 || idx < firstWrite_)
+      firstWrite_ = idx;
     ti._add_write(std::move(wdata));
   }
   template <typename T>
@@ -184,9 +232,13 @@ public:
   }
 
   bool check_for_write(TransItem& item) {
+    // if permute is NULL, we're not in commit (just an opacity check), so no need to check our writes (we
+    // haven't locked anything yet)
+    if (!permute)
+      return false;
     auto it = &item;
     bool has_write = it->has_write();
-    if (!has_write /*&& (!readMyWritesOnly_ || ((unsigned)firstWrite_ != transSet_.size() && it - &transSet_[0] < (unsigned)firstWrite_))*/) {
+    if (!has_write && !readMyWritesOnly_) {
       has_write = std::binary_search(permute, permute + perm_size, -1, [&] (const int& i, const int& j) {
 	  auto& e1 = unlikely(i < 0) ? item : transSet_[i];
 	  auto& e2 = likely(j < 0) ? item : transSet_[j];
@@ -209,6 +261,25 @@ public:
     return has_write;
   }
 
+  void check_reads() {
+    if (!check_reads(&transSet_[0], &transSet_[transSet_.size()])) {
+      abort();
+    }
+  }
+
+  bool check_reads(TransItem *trans_first, TransItem *trans_last) {
+    for (auto it = trans_first; it != trans_last; ++it)
+      if (it->has_read()) {
+#if PERF_LOGGING
+        total_r++;
+#endif
+        if (!it->sharedObj()->check(*it, *this)) {
+          return false;
+        }
+      }
+    return true;
+  }
+
   bool commit() {
     if (isAborted_)
       return false;
@@ -220,6 +291,9 @@ public:
 #endif
 
     if (firstWrite_ == -1) firstWrite_ = transSet_.size();
+
+    int permute_alloc[transSet_.size() - firstWrite_];
+    permute = permute_alloc;
 
     //    int permute[transSet_.size() - firstWrite_];
     /*int*/ perm_size = 0;
@@ -256,17 +330,11 @@ public:
     /* fence(); */
 
     //phase2
-    for (auto it = trans_first; it != trans_last; ++it)
-      if (it->has_read()) {
-#if PERF_LOGGING
-        total_r++;
-#endif
-        if (!it->sharedObj()->check(*it, *this)) {
-          success = false;
-          goto end;
-        }
-      }
-    
+    if (!check_reads(trans_first, trans_last)) {
+      success = false;
+      goto end;
+    }
+
     //phase3
     for (auto it = trans_first + firstWrite_; it != trans_last; ++it) {
       TransItem& ti = *it;
@@ -277,7 +345,7 @@ public:
         ti.sharedObj()->install(ti);
       }
     }
-    
+
   end:
 
     for (auto it = permute; it != perm_end; ) {
@@ -301,11 +369,14 @@ public:
       abort();
     }
 
+    transSet_.resize(0);
+
     return success;
   }
 
-
-  void abort() {
+  void silent_abort() {
+    if (isAborted_)
+      return;
 #if PERF_LOGGING
     __sync_add_and_fetch(&total_aborts, 1);
 #endif
@@ -315,6 +386,10 @@ public:
         ti.sharedObj()->undo(ti);
       }
     }
+  }
+
+  void abort() {
+    silent_abort();
     throw Abort();
   }
 
@@ -336,14 +411,9 @@ private:
 
 private:
   TransSet transSet_;
-  int permute[INIT_SET_SIZE];
+  int *permute;
   int perm_size;
   bool readMyWritesOnly_;
   bool isAborted_;
   int16_t firstWrite_;
 };
-
-threadinfo_t Transaction::tinfo[MAX_THREADS];
-__thread int Transaction::threadid;
-unsigned Transaction::global_epoch;
-std::function<void(unsigned)> Transaction::epoch_advance_callback;

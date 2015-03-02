@@ -1,217 +1,74 @@
 #pragma once
 
-#include "../masstree/masstree.hh"
-#include "../masstree/kvthread.hh"
-#include "../masstree/masstree_tcursor.hh"
-#include "../masstree/masstree_insert.hh"
-#include "../masstree/masstree_print.hh"
-#include "../masstree/masstree_remove.hh"
-#include "../masstree/masstree_scan.hh"
-#include "../masstree/string.hh"
+#include "masstree-beta/masstree.hh"
+#include "masstree-beta/kvthread.hh"
+#include "masstree-beta/masstree_tcursor.hh"
+#include "masstree-beta/masstree_insert.hh"
+#include "masstree-beta/masstree_print.hh"
+#include "masstree-beta/masstree_remove.hh"
+#include "masstree-beta/masstree_scan.hh"
+#include "masstree-beta/string.hh"
 #include "Transaction.hh"
 
+#include "versioned_value.hh"
 #include "stuffed_str.hh"
 
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
 
-#define READ_MY_WRITES 0
+#define READ_MY_WRITES 1
+
+#include "Debug_rcu.hh"
 
 #if PERF_LOGGING
 uint64_t node_aborts;
-uint64_t version_mallocs;
-uint64_t key_mallocs;
-uint64_t ref_mallocs;
-uint64_t read_mallocs;
-#endif
-
-#if !RCU
-class debug_threadinfo {
-public:
-#if 0
-  debug_threadinfo()
-    : ts_(0) { // XXX?
-  }
-#endif
-
-  class rcu_callback {
-  public:
-    virtual void operator()(debug_threadinfo& ti) = 0;
-  };
-
-private:
-  static inline void rcu_callback_function(void* p) {
-    debug_threadinfo ti;
-    static_cast<rcu_callback*>(p)->operator()(ti);
-  }
-
-
-public:
-  // XXX Correct node timstamps are needed for recovery, but for no other
-  // reason.
-  kvtimestamp_t operation_timestamp() const {
-    return 0;
-  }
-  kvtimestamp_t update_timestamp() const {
-    return ts_;
-  }
-  kvtimestamp_t update_timestamp(kvtimestamp_t x) const {
-    if (circular_int<kvtimestamp_t>::less_equal(ts_, x))
-      // x might be a marker timestamp; ensure result is not
-      ts_ = (x | 1) + 1;
-    return ts_;
-  }
-  kvtimestamp_t update_timestamp(kvtimestamp_t x, kvtimestamp_t y) const {
-    if (circular_int<kvtimestamp_t>::less(x, y))
-      x = y;
-    if (circular_int<kvtimestamp_t>::less_equal(ts_, x))
-      // x might be a marker timestamp; ensure result is not
-      ts_ = (x | 1) + 1;
-    return ts_;
-  }
-  void increment_timestamp() {
-    ts_ += 2;
-  }
-  void advance_timestamp(kvtimestamp_t x) {
-    if (circular_int<kvtimestamp_t>::less(ts_, x))
-      ts_ = x;
-  }
-
-  // event counters
-  void mark(threadcounter) {
-  }
-  void mark(threadcounter, int64_t) {
-  }
-  bool has_counter(threadcounter) const {
-    return false;
-  }
-  uint64_t counter(threadcounter ci) const {
-    return 0;
-  }
-
-  /** @brief Return a function object that calls mark(ci); relax_fence().
-   *
-   * This function object can be used to count the number of relax_fence()s
-   * executed. */
-  relax_fence_function accounting_relax_fence(threadcounter) {
-    return relax_fence_function();
-  }
-
-  class accounting_relax_fence_function {
-  public:
-    template <typename V>
-    void operator()(V) {
-      relax_fence();
-    }
-  };
-  /** @brief Return a function object that calls mark(ci); relax_fence().
-   *
-   * This function object can be used to count the number of relax_fence()s
-   * executed. */
-  accounting_relax_fence_function stable_fence() {
-    return accounting_relax_fence_function();
-  }
-
-  relax_fence_function lock_fence(threadcounter) {
-    return relax_fence_function();
-  }
-
-  void* allocate(size_t sz, memtag) {
-    return malloc(sz);
-  }
-  void deallocate(void* p, size_t sz, memtag) {
-    // in C++ allocators, 'p' must be nonnull
-    //free(p);
-  }
-  void deallocate_rcu(void *p, size_t sz, memtag) {
-  }
-
-  void* pool_allocate(size_t sz, memtag) {
-    int nl = (sz + CACHE_LINE_SIZE - 1) / CACHE_LINE_SIZE;
-    return malloc(nl * CACHE_LINE_SIZE);
-  }
-  void pool_deallocate(void* p, size_t sz, memtag) {
-  }
-  void pool_deallocate_rcu(void* p, size_t sz, memtag) {
-  }
-
-  // RCU
-  void rcu_register(rcu_callback *cb) {
-    //    scoped_rcu_base<false> guard;
-    //rcu::s_instance.free_with_fn(cb, rcu_callback_function);
-  }
-
-private:
-  mutable kvtimestamp_t ts_;
-};
-
 #endif
 
 typedef stuffed_str<uint32_t> versioned_str;
 
-  template <typename T>
-  struct versioned_value_struct /*: public threadinfo::rcu_callback*/ {
-    uint32_t version_;
-    T value;
+/*
+// TODO: ughhh
+void print(FILE* f, const char* prefix,
+           int indent, lcdf::Str key, kvtimestamp_t,
+           char* suffix) {
+  //      int fprintf(FILE * , const char * , ...);                                                                                                
+  fprintf(f, "%s%*s%.*s = %d%s (version %d)\n", prefix, indent, "", key.len, key.s, value_, suffix, version_);
+}
 
-    static versioned_value_struct* make() {
-      return new versioned_value_struct<T>();
-    }
+*/
 
-    inline void set_value(const T& v) {
-      value = v;
-    }
-
-    inline void read_value(T& v) {
-      v = value;
-    }
-
-    inline uint32_t& version() {
-      return version_;
-    }
-
-    void print(FILE* f, const char* prefix,
-               int indent, lcdf::Str key, kvtimestamp_t,
-               char* suffix) {
-      fprintf(f, "%s%*s%.*s = %s%s (version %d)\n", prefix, indent, "", key.len, key.s, value.data(), suffix, version);
-    }
-    
-#if 0
-    // rcu_callback method to self-destruct ourself
-    void operator()(threadinfo& ti) {
-      // this will call value's destructor
-      this->versioned_value_struct::~versioned_value_struct();
-      // and free our memory too
-      ti.deallocate(this, sizeof(versioned_value_struct), memtag_value);
-    }
-#endif
-  };
+template<>
+struct versioned_str_struct : public versioned_str {
+  typedef Masstree::Str value_type;
+  typedef versioned_str::stuff_type version_type;
   
-  template <>
-  struct versioned_value_struct<versioned_str> : versioned_str {
-    // we define this so we can compile with code that uses default versioned_value_struct
-    static versioned_value_struct<versioned_str>* make() { ALWAYS_ASSERT(0); return NULL; }
+  bool needsResize(const value_type& v) {
+    return needs_resize(v.length());
+  }
+  
+  versioned_str_struct* resizeIfNeeded(const value_type& potential_new_value) {
+    // TODO: this cast is only safe because we have no ivars or virtual methods
+    return (versioned_str_struct*)this->reserve(versioned_str::size_for(potential_new_value.length()));
+  }
+  
+  template <typename StringType>
+  inline void set_value(const StringType& v) {
+    auto *ret = this->replace(v.data(), v.length());
+    // we should already be the proper size at this point
+    assert(ret == this);
+  }
+  
+  // responsibility is on the caller of this method to make sure this read is atomic
+  value_type read_value() {
+    return Masstree::Str(this->data(), this->length());
+  }
+  
+  inline version_type& version() {
+    return stuff();
+  }
+};
 
-    template <typename StringType>
-    inline void set_value(const StringType& v) {
-      auto ptr = this->replace(v.data(), v.length(), malloc);
-      if (ptr) {
-	//	ALWAYS_ASSERT(0);
-      }
-    }
-
-    // responsibility is on the caller of this method to make sure this read is atomic
-    template <typename StringType>
-    inline void read_value(StringType &v) {
-      v.assign(this->data(), this->length());
-    }
-    
-    inline uint32_t& version() {
-      return stuff();
-    }
-  };
-
-template <typename V>
+template <typename V, typename Box = versioned_value_struct<V>>
 class MassTrans : public Shared {
 public:
 #if !RCU
@@ -222,17 +79,17 @@ public:
     threadinfo *ti;
   };
 
-  typedef typename std::conditional<std::is_same<V,versioned_str>::value, std::string, V>::type value_type;
+  typedef V value_type;
   typedef ti_wrapper threadinfo_type;
   typedef Masstree::Str Str;
 
-  typedef uint32_t Version;
+  typedef typename Box::version_type Version;
 
   static __thread threadinfo_type mythreadinfo;
 
 private:
 
-  typedef versioned_value_struct<V> versioned_value;
+  typedef Box versioned_value;
   
 public:
 
@@ -269,46 +126,14 @@ public:
 #endif
   }
 
-  bool put(Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
-#if 0
-    cursor_type lp(table_, key);
-    bool found = lp.find_insert(*ti.ti);
-    if (found) {
-      lock(&lp.value()->version());
-    } else {
-      auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
-      lp.value() = new(p) versioned_value<V>;
-    }
-    // this will uses value's copy constructor (TODO: just doing this may be unsafe and we should be using rcu for dealloc)
-    lp.value()->value = value;
-    if (found) {
-      inc_version(lp.value()->version());
-      unlock(&lp.value()->version());
-    } else {
-      lp.value()->version() = 0;
-    }
-    lp.finish(1, *ti.ti);
-    return found;
-#endif
-    return false;
-  }
-
-  bool get(Str key, value_type& value, threadinfo_type& ti = mythreadinfo) {
-    unlocked_cursor_type lp(table_, key);
-    bool found = lp.find_unlocked(*ti.ti);
-    if (found)
-      value = lp.value()->value;
-    return found;
-  }
-
-  template <typename StringType>
-  /*__attribute__((flatten))*/ bool transGet(Transaction& t, Str key, StringType& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
+  template <typename ValType>
+  bool transGet(Transaction& t, Str key, ValType& retval, size_t max_read = (size_t)-1, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
       versioned_value *e = lp.value();
       //      __builtin_prefetch(&e->version);
-      auto& item = t_item(t, e);
+      auto& item = t_read_only_item(t, e);
       if (!validityCheck(item, e)) {
         t.abort();
         return false;
@@ -321,12 +146,12 @@ public:
       }
       if (item.has_write()) {
         // read directly from the element if we're inserting it
-	if (we_inserted(item)) {
-	  e->read_value(retval);
-	} else {
-	  // TODO: should we refcount, copy, or...?
-	  retval = item.template write_value<value_type>();
-	}
+        if (we_inserted(item)) {
+          retval = e->read_value();
+        } else {
+          // TODO: should we refcount, copy, or...?
+          retval = item.template write_value<value_type>();
+        }
         return true;
       }
 #endif
@@ -378,10 +203,11 @@ public:
         t.add_read(item, valid_check_only_bit);
       }
       // same as inserts we need to store (copy) key so we can lookup to remove later
-#if PERF_LOGGING
-      key_mallocs++;
-#endif
-      t.add_write(item, std::move(key));
+      if (std::is_same<std::string, StringType>::value)
+	t.add_write(item, key);
+      else
+	// force a copy if e.g. string type is Str
+	t.add_write(item, std::string(key));
       item.set_flags(delete_bit);
       return found;
     } else {
@@ -391,18 +217,18 @@ public:
   }
 
   template <bool INSERT = true, bool SET = true, typename StringType>
-  bool transPut(Transaction& t, StringType key, const StringType& value, threadinfo_type& ti = mythreadinfo) {
+  bool transPut(Transaction& t, StringType key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
     // optimization to do an unlocked lookup first
     if (SET) {
       unlocked_cursor_type lp(table_, key);
       bool found = lp.find_unlocked(*ti.ti);
       if (found) {
-        return handlePutFound<INSERT, SET>(t, lp.value(), value);
+        return handlePutFound<INSERT, SET>(t, lp.value(), key, value);
       } else {
-	if (!INSERT) {
-	  ensureNotFound(t, lp.node(), lp.full_version_value());
-	  return false;
-	}
+        if (!INSERT) {
+          ensureNotFound(t, lp.node(), lp.full_version_value());
+          return false;
+        }
       }
     }
 
@@ -411,23 +237,10 @@ public:
     if (found) {
       versioned_value *e = lp.value();
       lp.finish(0, *ti.ti);
-      return handlePutFound<INSERT, SET>(t, e, value);
+      return handlePutFound<INSERT, SET>(t, e, key, value);
     } else {
-#if PERF_LOGGING
-      version_mallocs++;
-      key_mallocs++;
-      ref_mallocs++;
-#endif
       //      auto p = ti.ti->allocate(sizeof(versioned_value), memtag_value);
-      versioned_value* val;
-      if (is_versioned_str()) {
-	val = (versioned_value*)versioned_str::make(value.data(), value.length(), invalid_bit, malloc);
-      } else {
-	val = versioned_value::make();
-	val->set_value(value);
-	val->version() = invalid_bit;
-      }
-      fence();
+      versioned_value* val = (versioned_value*)versioned_value::make(value, invalid_bit);
       lp.value() = val;
 #if ABORT_ON_WRITE_READ_CONFLICT
       auto orig_node = lp.node();
@@ -452,19 +265,23 @@ public:
 #endif
       }
       auto& item = t.add_item<false>(this, val);
-      t.add_write(item, std::move(key));
+      if (std::is_same<std::string, StringType>::value)
+        t.add_write(item, key);
+      else
+        // force a copy
+        t.add_write(item, std::string(key));
       t.add_undo(item);
       return found;
     }
   }
 
   template <typename StringType>
-  bool transUpdate(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
+  bool transUpdate(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
     return transPut</*insert*/false, /*set*/true>(t, k, v, ti);
   }
 
   template <typename StringType>
-  bool transInsert(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
+  bool transInsert(Transaction& t, StringType k, const value_type& v, threadinfo_type& ti = mythreadinfo) {
     return !transPut</*insert*/true, /*set*/false>(t, k, v, ti);
   }
 
@@ -475,6 +292,17 @@ public:
     return 0;
   }
 
+  // goddammit templates/hax
+  template <typename Callback, typename V2>
+  static bool query_callback_overload(Str key, versioned_value_struct<V2> *val, Callback c) {
+    return c(key, val->read_value());
+  }
+
+  template <typename Callback>
+  static bool query_callback_overload(Str key, versioned_str_struct *val, Callback c) {
+    return c(key, val);
+  }
+
   // range queries
   template <typename Callback>
   void transQuery(Transaction& t, Str begin, Str end, Callback callback, threadinfo_type& ti = mythreadinfo) {
@@ -483,10 +311,10 @@ public:
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
       // TODO: this needs to read my writes
-      auto& item = this->t_item(t, value);
+      auto& item = this->t_read_only_item(t, value);
       if (!item.has_read())
         t.add_read(item, value->version());
-      return callback(key, value);
+      return query_callback_overload(key, value, callback);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback)> scanner(end, node_callback, value_callback);
@@ -499,10 +327,10 @@ public:
       this->ensureNotFound(t, node, version);
     };
     auto value_callback = [&] (Str key, versioned_value* value) {
-      auto& item = this->t_item(t, value);
+      auto& item = this->t_read_only_item(t, value);
       if (!item.has_read())
         t.add_read(item, value->version());
-      return callback(key, value);
+      return query_callback_overload(key, value, callback);
     };
 
     range_scanner<decltype(node_callback), decltype(value_callback), true> scanner(end, node_callback, value_callback);
@@ -510,6 +338,7 @@ public:
   }
 
 private:
+  // range query class thang
   template <typename Nodecallback, typename Valuecallback, bool Reverse = false>
   class range_scanner {
   public:
@@ -557,7 +386,25 @@ private:
     Nodecallback nodecallback_;
     Valuecallback valuecallback_;
   };
+
 public:
+
+  // non-transaction put/get. These just wrap a transaction get/put
+  bool put(Str key, const value_type& value, threadinfo_type& ti = mythreadinfo) {
+    Transaction t;
+    auto ret = transPut(t, key, value, ti);
+    t.commit();
+    return ret;
+  }
+
+  bool get(Str key, value_type& value, threadinfo_type& ti = mythreadinfo) {
+    Transaction t;
+    auto ret = transGet(t, key, value, ti);
+    t.commit();
+    return ret;
+  }
+
+  // implementation of Shared object methods
 
   void lock(versioned_value *e) {
 #if NOSORT
@@ -663,10 +510,11 @@ public:
   }
 
   void print() {
-    table_.print();
+    //    table_.print();
   }
   
 
+  // these are mostly for concurrent.cc (which currently requires specifically named methods)
   void transWrite(Transaction& t, int k, value_type v) {
     char s[16];
     sprintf(s, "%d", k);
@@ -677,7 +525,7 @@ public:
     sprintf(s, "%d", k);
     value_type v;
     if (!transGet(t, s, v)) {
-      return 0;
+      return value_type();
     }
     return v;
   }
@@ -721,8 +569,57 @@ public:
 
 
 private:
+  // called once we've checked our own writes for a found put()
+  void reallyHandlePutFound(Transaction& t, TransItem& item, versioned_value *e, Str key, const value_type& value) {
+    // resizing takes a lot of effort, so we first check if we'll need to
+    // (values never shrink in size, so if we don't need to resize, we'll never need to)
+    auto *new_location = e;
+    bool needsResize = e->needsResize(value);
+    if (needsResize) {
+      if (!we_inserted(item)) {
+        // TODO: might be faster to do this part at commit time but easiest to just do it now
+        lock(e);
+        // we had a weird race condition and now this element is gone. just abort at this point
+        if (e->version() & invalid_bit) {
+          unlock(e);
+          t.abort();
+          return;
+        }
+        e->version() |= invalid_bit;
+        // should be ok to unlock now because any attempted writes will be forced to abort
+        unlock(e);
+      }
+      // does the actual realloc. at this point e is marked invalid so we don't have to worry about
+      // other threads changing e's value
+      new_location = e->resizeIfNeeded(value);
+      // e can't get bigger so this should always be true
+      assert(new_location != e);
+      if (!we_inserted(item)) {
+        // copied version is going to be invalid because we just had to mark e invalid
+        new_location->version() &= ~invalid_bit;
+      }
+      cursor_type lp(table_, key);
+      // TODO: not even trying to pass around threadinfo here
+      bool found = lp.find_locked(*mythreadinfo.ti);
+      assert(found);
+      lp.value() = new_location;
+      lp.finish(0, *mythreadinfo.ti);
+      // now rcu free "e"
+    }
+#if READ_MY_WRITES
+    if (we_inserted(item)) {
+      new_location->set_value(value);
+    } else
+#endif
+    {
+      t.add_write(new_location == e ? item : t.add_item<false>(this, new_location), value);
+    }
+  }
+
+  // returns true if already in tree, false otherwise
+  // handles a transactional put when the given key is already in the tree
   template <bool INSERT=true, bool SET=true>
-  bool handlePutFound(Transaction& t, versioned_value *e, const value_type& value) {
+  bool handlePutFound(Transaction& t, versioned_value *e, Str key, const value_type& value) {
     auto& item = t_item(t, e);
     if (!validityCheck(item, e)) {
       t.abort();
@@ -735,10 +632,7 @@ private:
       if (INSERT) {
         item.set_flags(0);
         assert(!has_delete(item));
-        if (we_inserted(item))
-          e->set_value(value);
-        else
-          t.add_write(item, value);
+        reallyHandlePutFound(t, item, e, key, value);
       } else {
         // delete-then-update == not found
         // delete will check for other deletes so we don't need to re-log that check
@@ -748,29 +642,11 @@ private:
     // make sure this item doesn't get deleted (we don't care about other updates to it though)
     if (!item.has_read() && !we_inserted(item))
 #endif
-      {
+    {
       t.add_read(item, valid_check_only_bit);
     }
     if (SET) {
-#if READ_MY_WRITES
-      // if we're inserting this element already we can just update the value we're inserting
-      if (we_inserted(item))
-	// copy
-        e->set_value(value);
-      else
-#endif
-	{
-	// copy
-#if PERF_LOGGING
-	  // TODO: none of these are right anymore
-	ref_mallocs++;
-#endif
-      if (is_versioned_str() && e->needs_resize(value.length())) {
-	//	printf("need: %lu have: %d\n", value.length(), e->capacity());
-      }
-      // TODO: what exactly is different between using std::move here vs not??
-      t.add_write(item, std::move(value));
-	}
+      reallyHandlePutFound(t, item, e, key, value);
     }
     return true;
   }
@@ -778,7 +654,7 @@ private:
   template <typename NODE, typename VERSION>
   void ensureNotFound(Transaction& t, NODE n, VERSION v) {
     // TODO: could be more efficient to use add_item here, but that will also require more work for read-then-insert
-    auto& item = t_item(t, tag_inter(n));
+    auto& item = t_read_only_item(t, tag_inter(n));
     if (!item.has_read()) {
       t.add_read(item, v);
     }
@@ -808,6 +684,14 @@ private:
 #endif
   }
 
+  template <typename T>
+  TransItem& t_read_only_item(Transaction& t, T e) {
+#if READ_MY_WRITES
+    return t.read_only_item(this, e);
+#else
+    return t.add_item(this, e);
+#endif
+  }
 
   bool we_inserted(TransItem& item) {
     return item.has_undo();
@@ -874,18 +758,20 @@ private:
   }
 
   void atomicRead(versioned_value *e, Version& vers, value_type& val, size_t max_read = (size_t)-1) {
+    (void)max_read;
     Version v2;
     do {
-      vers = e->version();
+      do {
+        relax_fence();
+        vers = e->version();
+      } while (is_locked(vers));
       fence();
-#if PERF_LOGGING
-      read_mallocs++;
-#endif
-      e->read_value(val);
+      // TODO: max_read
+      val = e->read_value();
       fence();
       v2 = e->version();
     } while (vers != v2);
-  }
+   }
 
   static constexpr bool is_versioned_str() {
     return std::is_same<V, versioned_str>::value;
@@ -903,9 +789,9 @@ private:
   table_type table_;
 };
 
-template <typename V>
-__thread typename MassTrans<V>::threadinfo_type MassTrans<V>::mythreadinfo;
+template <typename V, typename Box>
+__thread typename MassTrans<V, Box>::threadinfo_type MassTrans<V, Box>::mythreadinfo;
 
-template <typename V>
-constexpr typename MassTrans<V>::Version MassTrans<V>::invalid_bit;
+template <typename V, typename Box>
+constexpr typename MassTrans<V, Box>::Version MassTrans<V, Box>::invalid_bit;
 
