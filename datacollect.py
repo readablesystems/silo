@@ -8,6 +8,9 @@ RUNTIME=30
 ROUNDS=5
 OTHER_OPTIONS=''
 try:
+    if sys.argv[1] == '-h' or sys.argv[1] == '--help':
+        print sys.argv[0], '[runtime=30] [rounds=5] [optional test arguments]'
+        sys.exit(0)
     # will set these until we run out of arguments
     RUNTIME = int(sys.argv[1])
     ROUNDS = int(sys.argv[2])
@@ -31,10 +34,13 @@ OUTPUT_DIR="benchmarks/data"
 
 DRY_RUN = False
 
+BEST = False
+
 def basic_test(testtype, impl, threads):
     cmd = CMD + threads + impl + testtype
     
     best = 0
+    sum = 0
     for i in xrange(ROUNDS):
         if DRY_RUN:
             out = "111 222"
@@ -42,10 +48,13 @@ def basic_test(testtype, impl, threads):
         else:
             out = subprocess.check_output(cmd, shell=True)
         data = out.split(' ')[0]
+        sum += float(data)
         if float(data) > best:
             best = float(data)
 
-    return str(best)
+    if BEST:
+        return str(best)
+    return str(sum / ROUNDS)
 
 def run_test(testname, testtype, impl, threads, fileobj):
     fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads)))
