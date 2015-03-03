@@ -16,7 +16,7 @@
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
 
-#define READ_MY_WRITES 1
+#define READ_MY_WRITES 0
 
 #include "Debug_rcu.hh"
 
@@ -37,7 +37,6 @@ void print(FILE* f, const char* prefix,
 
 */
 
-template<>
 struct versioned_str_struct : public versioned_str {
   typedef Masstree::Str value_type;
   typedef versioned_str::stuff_type version_type;
@@ -55,6 +54,7 @@ struct versioned_str_struct : public versioned_str {
   inline void set_value(const StringType& v) {
     auto *ret = this->replace(v.data(), v.length());
     // we should already be the proper size at this point
+    (void)ret;
     assert(ret == this);
   }
   
@@ -601,6 +601,7 @@ private:
       cursor_type lp(table_, key);
       // TODO: not even trying to pass around threadinfo here
       bool found = lp.find_locked(*mythreadinfo.ti);
+      (void)found;
       assert(found);
       lp.value() = new_location;
       lp.finish(0, *mythreadinfo.ti);

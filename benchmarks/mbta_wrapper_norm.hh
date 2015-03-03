@@ -97,7 +97,7 @@ public:
 
 private:
   friend class mbta_wrapper;
-  typedef MassTrans<versioned_str> mbta_type;
+  typedef MassTrans<std::string, versioned_str_struct> mbta_type;
   mbta_type mbta;
 
   const std::string name;
