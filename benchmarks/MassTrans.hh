@@ -18,6 +18,8 @@
 
 #define READ_MY_WRITES 1
 
+#define OPACITY 1
+
 #include "Debug_rcu.hh"
 
 #if PERF_LOGGING
@@ -164,6 +166,9 @@ public:
     } else {
       ensureNotFound(t, lp.node(), lp.full_version_value());
     }
+#if OPACITY
+    t.check_reads();
+#endif
     return found;
   }
 
@@ -210,11 +215,13 @@ public:
 	// force a copy if e.g. string type is Str
 	t.add_write(item, std::string(key));
       item.set_flags(delete_bit);
-      return found;
     } else {
       ensureNotFound(t, lp.node(), lp.full_version_value());
-      return found;
     }
+#if OPACITY
+    t.check_reads();
+#endif
+    return found;
   }
 
   template <bool INSERT = true, bool SET = true, typename StringType>
@@ -228,6 +235,9 @@ public:
       } else {
         if (!INSERT) {
           ensureNotFound(t, lp.node(), lp.full_version_value());
+#if OPACITY
+	  t.check_reads();
+#endif
           return false;
         }
       }
@@ -272,6 +282,9 @@ public:
         // force a copy
         t.add_write(item, std::string(key));
       t.add_undo(item);
+#if OPACITY
+      t.check_reads();
+#endif
       return found;
     }
   }
@@ -650,6 +663,9 @@ private:
     if (SET) {
       reallyHandlePutFound(t, item, e, key, value);
     }
+#if OPACITY
+    t.check_reads();
+#endif
     return true;
   }
 
