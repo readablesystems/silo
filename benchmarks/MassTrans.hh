@@ -16,7 +16,7 @@
 #define RCU 0
 #define ABORT_ON_WRITE_READ_CONFLICT 0
 
-#define READ_MY_WRITES 0
+#define READ_MY_WRITES 1
 
 #include "Debug_rcu.hh"
 
@@ -147,7 +147,8 @@ public:
       if (item.has_write()) {
         // read directly from the element if we're inserting it
         if (we_inserted(item)) {
-          retval = e->read_value();
+          auto str = e->read_value();
+          retval.assign(str.data(), str.length());
         } else {
           // TODO: should we refcount, copy, or...?
           retval = item.template write_value<value_type>();
