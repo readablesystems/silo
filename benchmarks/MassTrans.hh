@@ -342,7 +342,7 @@ public:
   }
 
   template <typename StringType>
-  bool transDelete(Transaction& t, StringType key, threadinfo_type& ti = mythreadinfo) {
+  bool transDelete(Transaction& t, StringType& key, threadinfo_type& ti = mythreadinfo) {
     unlocked_cursor_type lp(table_, key);
     bool found = lp.find_unlocked(*ti.ti);
     if (found) {
@@ -391,7 +391,7 @@ public:
   }
 
   template <bool INSERT = true, bool SET = true, typename StringType>
-  bool transPut(Transaction& t, StringType key, const StringType& value, threadinfo_type& ti = mythreadinfo) {
+  bool transPut(Transaction& t, const StringType& key, const StringType& value, threadinfo_type& ti = mythreadinfo) {
     // optimization to do an unlocked lookup first
     if (SET) {
       unlocked_cursor_type lp(table_, key);
@@ -459,12 +459,12 @@ public:
   }
 
   template <typename StringType>
-  bool transUpdate(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
+  bool transUpdate(Transaction& t, const StringType& k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
     return transPut</*insert*/false, /*set*/true>(t, k, v, ti);
   }
 
   template <typename StringType>
-  bool transInsert(Transaction& t, StringType k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
+  bool transInsert(Transaction& t, const StringType& k, const StringType& v, threadinfo_type& ti = mythreadinfo) {
     return !transPut</*insert*/true, /*set*/false>(t, k, v, ti);
   }
 
@@ -769,7 +769,7 @@ private:
 	//	printf("need: %lu have: %d\n", value.length(), e->capacity());
       }
       // TODO: what exactly is different between using std::move here vs not??
-      t.add_write(item, std::move(value));
+      t.add_write(item, value);
 	}
     }
     return true;
