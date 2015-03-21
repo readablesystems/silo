@@ -1,3 +1,6 @@
 [submodule "masstree"]
 	path = masstree
 	url = git://github.com/kohler/masstree-beta.git
+[submodule "benchmarks/sto"]
+	path = benchmarks/sto
+	url = git@github.com:nathanielherman/sto.git

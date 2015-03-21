@@ -2,8 +2,8 @@
 
 #include "abstract_db.h"
 #include "abstract_ordered_index.h"
-#include "Transaction.hh"
-#include "MassTrans.hh"
+#include "sto/Transaction.hh"
+#include "sto/MassTrans.hh"
 
 #define STD_OP(f) auto& t = *unpack<Transaction*>(txn); \
   try { \
@@ -121,7 +121,7 @@ public:
   do_txn_finish() const
   {
 #if PERF_LOGGING
-    printf("v: %lu, k %lu, ref %lu, read %lu\n", version_mallocs, key_mallocs, ref_mallocs, read_mallocs);
+    //    printf("v: %lu, k %lu, ref %lu, read %lu\n", version_mallocs, key_mallocs, ref_mallocs, read_mallocs);
 #endif
     //txn_epoch_sync<Transaction>::finish();
   }
