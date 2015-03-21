@@ -5,7 +5,7 @@
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
 
-#define STD_OP(f) auto& t = *unpack<Transaction*>(txn); \
+#define STD_OP(f) auto& t = *(Transaction*)(txn);	\
   try { \
     f; \
   } catch (Transaction::Abort E) { \
@@ -157,7 +157,7 @@ public:
   }
 
   bool commit_txn(void *txn) {
-    STD_OP(return t.commit());
+    STD_OP({t.commit(); return true;});
     return false;
   }
 
