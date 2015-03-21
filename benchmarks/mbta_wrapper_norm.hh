@@ -130,7 +130,9 @@ public:
   thread_init(bool loader)
   {
     static int tidcounter = 0;
-    Transaction::threadid = tidcounter++;
+    if (!loader)
+      // TODO: we're not really using threadids currently but this is racy
+      Transaction::threadid = tidcounter++;
   }
 
   void
