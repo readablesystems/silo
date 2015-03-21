@@ -18,6 +18,7 @@ try:
 except: pass
 
 CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
+CMD_RMW="out-perf.masstree/benchmarks/dbtest_rmw --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 MAKE_CMD='MODE=perf make -j dbtest'
 SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
 NTHREADS = 24
@@ -36,8 +37,9 @@ DRY_RUN = False
 
 BEST = False
 
-def basic_test(testtype, impl, threads):
-    cmd = CMD + threads + impl + testtype
+def basic_test(testtype, impl, threads, rmw=False):
+    cmd = CMD_RMW if rmw else CMD
+    cmd += threads + impl + testtype
     
     best = 0
     sum = 0
@@ -57,7 +59,8 @@ def basic_test(testtype, impl, threads):
     return str(sum / ROUNDS)
 
 def run_test(testname, testtype, impl, threads, fileobj):
-    fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads)))
+    fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads, rmw=
+                                                     testname=='readmywrites')))
 
 def us_and_silo(testtype, threads, fileobj):
     run_test('us', testtype, MBTA, threads, fileobj)
@@ -111,16 +114,16 @@ def nostablesort(testtype, threads, fileobj):
 
 
 def rmw(testtype, threads, fileobj):
-    patch_apply('rmw.patch')
+#    patch_apply('rmw.patch')
     run_test('readmywrites', testtype, MBTA, threads, fileobj)
-    patch_revoke('rmw.patch')
+#    patch_revoke('rmw.patch')
 
 def stdtest(f, testtype, threads, testname):
     singlethr = threads==SINGLE_THREADED
     f.write(testname + '\n')
     us_and_silo(testtype, threads, f)
 
-    #rmw(testtype, threads, f)
+    rmw(testtype, threads, f)
 
 #    if singlethr:
         # for single threaded we also run a no sort test

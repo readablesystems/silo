@@ -12,7 +12,7 @@
 
 #define NOSORT 0
 
-#define MAX_THREADS 8
+#define MAX_THREADS 24
 
 #if LOCAL_VECTOR
 #include "local_vector.hh"
