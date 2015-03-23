@@ -91,9 +91,9 @@ public:
     throw 2;
   }
 
+  typedef MassTrans<std::string, versioned_str_struct> mbta_type;
 private:
   friend class mbta_wrapper;
-  typedef MassTrans<std::string, versioned_str_struct> mbta_type;
   mbta_type mbta;
 
   const std::string name;
@@ -127,9 +127,18 @@ public:
   thread_init(bool loader)
   {
     static int tidcounter = 0;
-    if (!loader)
-      // TODO: we're not really using threadids currently but this is racy
-      Transaction::threadid = tidcounter++;
+    if (!loader) {
+      Transaction::threadid = __sync_fetch_and_add(&tidcounter, 1);
+      if (Transaction::threadid == 0) {
+	// someone has to do this (they don't provide us with a general init callback)
+	mbta_ordered_index::mbta_type::static_init();
+	// need this too
+	pthread_t advancer;
+	pthread_create(&advancer, NULL, Transaction::epoch_advancer, NULL);
+	pthread_detach(advancer);
+      }
+    }
+    mbta_ordered_index::mbta_type::thread_init();
   }
 
   void
@@ -168,7 +177,6 @@ public:
              size_t value_size_hint,
              bool mostly_append = false) {
     auto ret = new mbta_ordered_index(name, this);
-    ret->mbta.thread_init();
     return ret;
   }
 
