@@ -18,8 +18,10 @@ try:
 except: pass
 
 CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
-CMD_RMW="out-perf.masstree/benchmarks/dbtest_rmw --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
-MAKE_CMD='MODE=perf make -j dbtest'
+CMD_RMW="out-perf.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
+MAKE_CMD_TEMPL='MODE=perf %s make -j dbtest'
+MAKE_CMD = MAKE_CMD_TEMPL % ''
+MAKE_CMD_RMW = MAKE_CMD_TEMPL % 'STO_RMW=1'
 SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
 NTHREADS = 24
 MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
@@ -78,6 +80,7 @@ def ignore_run(c):
 
 def remake():
     simple_run(MAKE_CMD)
+    simple_run(MAKE_CMD_RMW)
 
 def patch_apply(name):
     simple_run('patch -p1 < ' + name)
