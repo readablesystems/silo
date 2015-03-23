@@ -61,11 +61,9 @@ public:
             scan_callback &callback,
             str_arena *arena = nullptr) {
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, versioned_str* value) {
-	  auto *s = (*arena)();
-	  s->assign(value->data(), value->length());
-          return callback.invoke(key.data(), key.length(), *s);
-        }));
+    STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, std::string& value) {
+          return callback.invoke(key.data(), key.length(), value);
+        }, arena));
   }
 
   void rscan(
@@ -76,11 +74,9 @@ public:
              str_arena *arena = nullptr) {
 #if 1
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transRQuery(t, start_key, end, [&] (mbta_type::Str key, versioned_str* value) {
-	  auto *s = (*arena)();
-	  s->assign(value->data(), value->length());
-          return callback.invoke(key.data(), key.length(), *s);
-        }));
+    STD_OP(mbta.transRQuery(t, start_key, end, [&] (mbta_type::Str key, std::string& value) {
+          return callback.invoke(key.data(), key.length(), value);
+        }, arena));
 #endif
   }
 
@@ -121,6 +117,7 @@ public:
   do_txn_finish() const
   {
 #if PERF_LOGGING
+    Transaction::print_stats();
     //    printf("v: %lu, k %lu, ref %lu, read %lu\n", version_mallocs, key_mallocs, ref_mallocs, read_mallocs);
 #endif
     //txn_epoch_sync<Transaction>::finish();
