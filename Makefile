@@ -26,6 +26,8 @@ MODE ?= perf
 # run with 'MASSTREE=0' to turn off masstree
 MASSTREE ?= 1
 
+STO_RMW ?= 0
+
 ###############
 
 DEBUG_S=$(strip $(DEBUG))
@@ -34,6 +36,7 @@ EVENT_COUNTERS_S=$(strip $(EVENT_COUNTERS))
 USE_MALLOC_MODE_S=$(strip $(USE_MALLOC_MODE))
 MODE_S=$(strip $(MODE))
 MASSTREE_S=$(strip $(MASSTREE))
+STO_RMW_S=$(strip $(STO_RMW))
 MASSTREE_CONFIG:=--enable-max-key-len=1024
 
 ifeq ($(DEBUG_S),1)
@@ -51,7 +54,10 @@ endif
 ifeq ($(EVENT_COUNTERS_S),1)
 	OSUFFIX_E=.ectrs
 endif
-OSUFFIX=$(OSUFFIX_D)$(OSUFFIX_S)$(OSUFFIX_E)
+ifeq ($(STO_RMW_S),1)
+	OSUFFIX_R=.rmw
+endif
+OSUFFIX=$(OSUFFIX_D)$(OSUFFIX_S)$(OSUFFIX_E)$(OSUFFIX_R)
 
 ifeq ($(MODE_S),perf)
 	O := out-perf$(OSUFFIX)
@@ -95,6 +101,7 @@ ifeq ($(MASSTREE_S),1)
 else
 	O := $(O).silotree
 endif
+CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
 
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
