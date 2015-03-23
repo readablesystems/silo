@@ -23,7 +23,7 @@ public:
   bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	bool ret = mbta.transGet(t, key, value, max_bytes_read);
+	bool ret = mbta.transGet(t, key, value);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
 	return ret;
 	  });
@@ -37,7 +37,7 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut(t, key, value);
+        mbta.transPut<false>(t, key, value);
         return 0;
           });
   }
@@ -47,11 +47,11 @@ public:
                                          const std::string &key,
                                          const std::string &value)
   {
-    STD_OP(mbta.transInsert(t, key, value); return 0;)
+    STD_OP(mbta.transInsert<false>(t, key, value); return 0;)
   }
 
   void remove(void *txn, const std::string &key) {
-    STD_OP(mbta.transDelete(t, key));
+    STD_OP(mbta.transDelete<false>(t, key));
   }
 
   void scan(
