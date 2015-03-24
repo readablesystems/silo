@@ -288,16 +288,17 @@ bench_runner::run()
   const double avg_persist_latency_ms =
     get<2>(persisted_info) / 1000.0;
 
+  map<string, size_t> agg_txn_counts = workers[0]->get_txn_counts();
+  ssize_t size_delta = workers[0]->get_size_delta();
+  for (size_t i = 1; i < workers.size(); i++) {
+    map_agg(agg_txn_counts, workers[i]->get_txn_counts());
+    size_delta += workers[i]->get_size_delta();
+  }
+
   if (verbose) {
     const pair<uint64_t, uint64_t> mem_info_after = get_system_memory_info();
     const int64_t delta = int64_t(mem_info_before.first) - int64_t(mem_info_after.first); // free mem
     const double delta_mb = double(delta)/1048576.0;
-    map<string, size_t> agg_txn_counts = workers[0]->get_txn_counts();
-    ssize_t size_delta = workers[0]->get_size_delta();
-    for (size_t i = 1; i < workers.size(); i++) {
-      map_agg(agg_txn_counts, workers[i]->get_txn_counts());
-      size_delta += workers[i]->get_size_delta();
-    }
     const double size_delta_mb = double(size_delta)/1048576.0;
     map<string, counter_data> ctrs = event_counter::get_all_counters();
 
@@ -368,7 +369,8 @@ bench_runner::run()
        << agg_persist_throughput << " "
        << avg_latency_ms << " "
        << avg_persist_latency_ms << " "
-       << agg_abort_rate << endl;
+       << agg_abort_rate << " "
+       << agg_txn_counts["NewOrder"] << endl;
   cout.flush();
 
   if (!slow_exit)
