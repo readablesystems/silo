@@ -91,7 +91,7 @@ public:
     throw 2;
   }
 
-  typedef MassTrans<std::string, versioned_str_struct> mbta_type;
+  typedef MassTrans<std::string, versioned_str_struct, READ_MY_WRITES/*opacity*/> mbta_type;
 private:
   friend class mbta_wrapper;
   mbta_type mbta;
