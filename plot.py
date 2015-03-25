@@ -12,6 +12,10 @@ COLORZ = True
 NAME_MAP = {'us\n': 'STO', 'silo\n': 'Silo', 'readmywrites\n': 'STO-full'}
 PERM = [1, 0, 2]
 
+SCALE_CORE = False
+
+LINE = False
+
 def settings():
     # These are the "Tableau 20" colors as RGB.  
     global tableau20
@@ -31,9 +35,24 @@ def median(l):
 
 def permute(perm, l):
     l2 = list(l)
-    for i, p in enumerate(perm):
-        l2[i] = l[p]
-    return l2
+    newl = []
+    for p in perm:
+        newl.append(l2[p])
+    return newl
+
+def get_loc():
+    return 'upper right' if SCALE_CORE else 'upper left'
+
+def line_graph(data, labels, title, colors):
+    x = [int(l[:2]) for l in labels]
+    for ((k, d), color) in zip(permute(PERM,data.iteritems()), colors):
+        plt.plot(x, d.values(), marker='s', color=color, label=NAME_MAP[k])
+    plt.xlabel('Threads')
+    plt.ylabel('Thousands of transactions per second')
+    plt.title(title)
+    plt.legend(loc=get_loc())
+    plt.ylim(0)
+    return plt
 
 def plot(dat, title):
     fig, ax = plt.subplots()
@@ -59,7 +78,7 @@ def plot(dat, title):
             scale_by = None
         else:
             print lines[i], lines[i+1]
-            if not scale_by: scale_by = 1#float(lines[i+1])
+            if not scale_by: scale_by = int(cur_name[:2]) if SCALE_CORE else 1#float(lines[i+1])
             if not data.has_key(lines[i]):
                 data[lines[i]] = OrderedDict()
                 # initialize previously missed values to 0
@@ -77,6 +96,10 @@ def plot(dat, title):
         colors = tableau20
     else:
         colors = [(0,0,0), (.5,.5,.5), (.7,.7,.7)]
+
+    if LINE:
+        return line_graph(data, labels, title, colors)
+
     n_datapoints = len(data.values()[0].values())
     inds = numpy.arange(n_datapoints)
     n_types = len(data.values())
@@ -89,11 +112,12 @@ def plot(dat, title):
 
     ax.set_xticks(inds + width * n_types / 2.0)
     ax.set_xticklabels(labels, size=10)
-    ax.set_ylabel('Thousands of transactions per second', rotation=90)
+    ax.set_ylabel('Thousands of transactions per second' + ' per core' if SCALE_CORE else '', rotation=90)
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
-    ax.set_aspect(1/900000. * 2)
+    if not SCALE_CORE:
+        ax.set_aspect(1/900000. * 2)
     plt.xlim()
-    ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc='upper left', prop={'size': 10})
+    ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc=get_loc(), prop={'size': 10})
     #loc='lower center', bbox_to_anchor=(.9, .05) )
 
     ax.set_title(title)
@@ -109,6 +133,16 @@ except:
 
 try:
     COLORZ = sys.argv[4] != 'bw'
+except:
+    pass
+
+try:
+    SCALE_CORE = sys.argv[5] == 'core'
+except:
+    pass
+
+try:
+    LINE = sys.argv[6] == 'line'
 except:
     pass
 

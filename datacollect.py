@@ -32,7 +32,7 @@ NTHREADS = 24
 MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
 MANY_THREADED= MANY_THREADS(NTHREADS)
 MBTA="-dmbta "
-SILO="--disable-snapshots --disable-gc "
+SILO="--disable-snapshots "
 TPCC = '--bench tpcc '
 YCSB = '--bench ycsb '
 
