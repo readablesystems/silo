@@ -4,17 +4,22 @@ import os
 import sys
 import subprocess
 
+try:
+    FILENAME = sys.argv[1]
+except:
+    print sys.argv[0], 'outputfile [runtime=30] [rounds=5] [optional test arguments]'
+    sys.exit(0)
 RUNTIME=30
 ROUNDS=5
 OTHER_OPTIONS=''
 try:
     if sys.argv[1] == '-h' or sys.argv[1] == '--help':
-        print sys.argv[0], '[runtime=30] [rounds=5] [optional test arguments]'
+        print sys.argv[0], 'outputfile [runtime=30] [rounds=5] [optional test arguments]'
         sys.exit(0)
     # will set these until we run out of arguments
-    RUNTIME = int(sys.argv[1])
-    ROUNDS = int(sys.argv[2])
-    OTHER_OPTIONS = sys.argv[3]
+    RUNTIME = int(sys.argv[2])
+    ROUNDS = int(sys.argv[3])
+    OTHER_OPTIONS = sys.argv[4]
 except: pass
 
 CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
@@ -43,22 +48,26 @@ def basic_test(testtype, impl, threads, rmw=False):
     cmd = CMD_RMW if rmw else CMD
     cmd += threads + impl + testtype
     
-    best = 0
-    sum = 0
+    pts = []
+    neworders = []
     for i in xrange(ROUNDS):
         if DRY_RUN:
             out = "111 222"
             print cmd
         else:
             out = subprocess.check_output(cmd, shell=True)
-        data = out.split(' ')[0]
-        sum += float(data)
-        if float(data) > best:
-            best = float(data)
+        outl = out.split(' ')
+        data = outl[0]
+        pts.append(float(data))
+        if len(outl) == 6:
+            neworders.append(float(outl[5]))
 
-    if BEST:
-        return str(best)
-    return str(sum / ROUNDS)
+    if len(neworders):
+        return repr((pts, neworders))
+    return repr(pts)
+#sorted(pts)[len(pts)/2]
+#    return max(pts)
+#    return sum(pts) / len(pts)
 
 def run_test(testname, testtype, impl, threads, fileobj):
     fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads, rmw=
@@ -158,10 +167,10 @@ def indiv_tpcc_tests(f, threads):
     
     
 def tpcc():
-    f = open(OUTPUT_DIR + '/' + 'tpcc', 'w')
+    f = open(OUTPUT_DIR + '/' + FILENAME, 'w')
 
-    stdtest(f, TPCC, SINGLE_THREADED, "1 thread")
-    for i in [8, 16, 24]:
+    #stdtest(f, TPCC, SINGLE_THREADED, "1 thread")
+    for i in [24]:
         stdtest(f, TPCC, MANY_THREADS(i), "%d threads" % i)
 
 #    indiv_tpcc_tests(f, SINGLE_THREADED)

@@ -9,6 +9,9 @@ tableau20 = None
 
 COLORZ = True
 
+NAME_MAP = {'us\n': 'STO', 'silo\n': 'Silo', 'readmywrites\n': 'STO-full'}
+PERM = [1, 0, 2]
+
 def settings():
     # These are the "Tableau 20" colors as RGB.  
     global tableau20
@@ -23,6 +26,14 @@ def settings():
         r, g, b = tableau20[i]  
         tableau20[i] = (r / 255., g / 255., b / 255.)
 
+def median(l):
+    return sorted(l)[len(l)/2]
+
+def permute(perm, l):
+    l2 = list(l)
+    for i, p in enumerate(perm):
+        l2[i] = l[p]
+    return l2
 
 def plot(dat, title):
     fig, ax = plt.subplots()
@@ -54,7 +65,9 @@ def plot(dat, title):
                 # initialize previously missed values to 0
                 for l in labels:
                     data[lines[i]][l] = 0
-            data[lines[i]][cur_name] = float(lines[i+1]) / scale_by
+            raw_dat = eval(lines[i+1]) # very safe
+            throughputs, neworders = raw_dat
+            data[lines[i]][cur_name] = median(throughputs) / scale_by
             next(it)
 
     print data
@@ -69,7 +82,7 @@ def plot(dat, title):
     n_types = len(data.values())
     width = .7 / n_types
     bars = []
-    for (d, c) in zip(data.values(), colors):
+    for (d, c) in zip(permute(PERM,data.values()), colors):
         pts = d.values()
         bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c))
         cur_width += width
@@ -80,8 +93,8 @@ def plot(dat, title):
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
     ax.set_aspect(1/900000. * 2)
     plt.xlim()
-    ax.legend(map(lambda x: x[0], bars), data.keys(), ncol=4, loc='upper left', prop={'size': 10})
-#loc='lower center', bbox_to_anchor=(.9, .05) )
+    ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc='upper left', prop={'size': 10})
+    #loc='lower center', bbox_to_anchor=(.9, .05) )
 
     ax.set_title(title)
 
