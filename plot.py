@@ -54,9 +54,7 @@ def line_graph(data, labels, title, colors):
     plt.ylim(0)
     return plt
 
-def plot(dat, title):
-    fig, ax = plt.subplots()
-
+def parse(dat):
     f = open(dat, 'r')
     first = True
     labels = []
@@ -78,7 +76,9 @@ def plot(dat, title):
             scale_by = None
         else:
             print lines[i], lines[i+1]
-            if not scale_by: scale_by = int(cur_name[:2]) if SCALE_CORE else 1#float(lines[i+1])
+            if not scale_by: 
+                scale_by = int(cur_name[:2]) if SCALE_CORE else 1
+#float(lines[i+1])
             if not data.has_key(lines[i]):
                 data[lines[i]] = OrderedDict()
                 # initialize previously missed values to 0
@@ -90,6 +90,12 @@ def plot(dat, title):
             next(it)
 
     print data
+
+    return data, labels
+
+
+def plot(data, labels, title):
+    fig, ax = plt.subplots()
     
     cur_width = 0
     if COLORZ:
@@ -147,4 +153,5 @@ except:
     pass
 
 settings()
-plot(sys.argv[1], title).savefig(sys.argv[2])
+data, labels = parse(sys.argv[1])
+plot(data, labels, title).savefig(sys.argv[2]) 
