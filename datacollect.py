@@ -169,8 +169,8 @@ def indiv_tpcc_tests(f, threads):
 def tpcc():
     f = open(OUTPUT_DIR + '/' + FILENAME, 'w')
 
-    #stdtest(f, TPCC, SINGLE_THREADED, "1 thread")
-    for i in [24]:
+    stdtest(f, TPCC, SINGLE_THREADED, "1 thread")
+    for i in [4,8,16,24]:
         stdtest(f, TPCC, MANY_THREADS(i), "%d threads" % i)
 
 #    indiv_tpcc_tests(f, SINGLE_THREADED)

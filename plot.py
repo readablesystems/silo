@@ -9,7 +9,7 @@ tableau20 = None
 
 COLORZ = True
 
-NAME_MAP = {'us\n': 'STO', 'silo\n': 'Silo', 'readmywrites\n': 'STO-full'}
+NAME_MAP = {'us\n': 'STO-', 'silo\n': 'Silo', 'readmywrites\n': 'STO'}
 PERM = [1, 0, 2]
 
 SCALE_CORE = False
