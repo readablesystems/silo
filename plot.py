@@ -34,11 +34,11 @@ def median(l):
     return sorted(l)[len(l)/2]
 
 def permute(perm, l):
-    l2 = list(l)
-    newl = []
-    for p in perm:
-        newl.append(l2[p])
-    return newl
+  l2 = list(l)
+  newl = []
+  for p in perm:
+    newl.append(l2[p])
+  return newl
 
 def get_loc():
     return 'upper right' if SCALE_CORE else 'upper left'
@@ -60,6 +60,8 @@ def parse(dat):
     labels = []
     lines = f.readlines()
     data = OrderedDict()
+    min = OrderedDict()
+    max = OrderedDict()
     scale_by = None
     cur_name = None
     it = iter(xrange(len(lines)))
@@ -72,6 +74,13 @@ def parse(dat):
             for d in data.values():
                 if not d.has_key(cur_name):
                     d[cur_name] = 0
+            for d in min.values():
+                if not d.has_key(cur_name):
+                    d[cur_name] = 0
+            for d in max.values():
+                if not d.has_key(cur_name):
+                    d[cur_name] = 0
+
             first = True
             scale_by = None
         else:
@@ -81,20 +90,31 @@ def parse(dat):
 #float(lines[i+1])
             if not data.has_key(lines[i]):
                 data[lines[i]] = OrderedDict()
+                min[lines[i]] = OrderedDict()
+                max[lines[i]] = OrderedDict()
                 # initialize previously missed values to 0
                 for l in labels:
                     data[lines[i]][l] = 0
-            raw_dat = eval(lines[i+1]) # very safe
+                    min[lines[i]][l] = 0
+                    max[lines[i]][l] = 0
+            raw_dat = eval(lines[i+1]) # very safe lol
             throughputs, neworders = raw_dat
+            print "XXXXX"
+            print throughputs
+            print median(throughputs)
+            print numpy.amin(throughputs)
+            print numpy.amax(throughputs)
             data[lines[i]][cur_name] = median(throughputs) / scale_by
+            min[lines[i]][cur_name] = numpy.amin(throughputs)/scale_by
+            max[lines[i]][cur_name] = numpy.amax(throughputs)/scale_by
             next(it)
 
     print data
 
-    return data, labels
+    return data, min, max, labels
 
 
-def plot(data, labels, title):
+def plot(data, min, max, labels, title):
     fig, ax = plt.subplots()
     
     cur_width = 0
@@ -111,9 +131,11 @@ def plot(data, labels, title):
     n_types = len(data.values())
     width = .7 / n_types
     bars = []
-    for (d, c) in zip(permute(PERM,data.values()), colors):
+    for (d, a, b, c) in zip(permute(PERM, data.values()), permute(PERM, min.values()), permute(PERM, max.values()), colors):
         pts = d.values()
-        bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c))
+        minerr = numpy.subtract(pts, a.values())
+        maxerr = numpy.subtract(b.values(), pts)
+        bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c, yerr = [minerr, maxerr], ecolor = 'k'))
         cur_width += width
 
     ax.set_xticks(inds + width * n_types / 2.0)
@@ -122,6 +144,8 @@ def plot(data, labels, title):
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
     if not SCALE_CORE:
         ax.set_aspect(1/900000. * 2)
+    # why does this work but not set_ylabel...
+    plt.ylabel('Thousands of transactions per second', rotation=90)
     plt.xlim()
     ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc=get_loc(), prop={'size': 10})
     #loc='lower center', bbox_to_anchor=(.9, .05) )
@@ -153,5 +177,5 @@ except:
     pass
 
 settings()
-data, labels = parse(sys.argv[1])
-plot(data, labels, title).savefig(sys.argv[2]) 
+data, min, max, labels = parse(sys.argv[1])
+plot(data, min, max, labels, title).savefig(sys.argv[2])
