@@ -9,8 +9,10 @@ tableau20 = None
 
 COLORZ = True
 
-NAME_MAP = {'us\n': 'STO-', 'silo\n': 'Silo', 'readmywrites\n': 'STO'}
-PERM = [1, 0, 2]
+NAME_MAP = {'us\n': 'No read-my-writes', 'silo\n': 'Silo', 'readmywrites\n': 'STO',
+            'nodupreads\n': 'No duplicate reads', 'nodupnohash\n': 'No hash table'}
+PERM = [3, 2, 1, 0]
+#[1, 0, 2]
 
 SCALE_CORE = False
 
@@ -34,11 +36,17 @@ def median(l):
     return sorted(l)[len(l)/2]
 
 def permute(perm, l):
+  return l
   l2 = list(l)
   newl = []
   for p in perm:
     newl.append(l2[p])
   return newl
+
+def reverse(l):
+    perm = range(len(l))
+    perm.reverse()
+    return permute(perm, l)
 
 def get_loc():
     return 'upper right' if SCALE_CORE else 'upper left'
@@ -129,25 +137,27 @@ def plot(data, min, max, labels, title):
     n_datapoints = len(data.values()[0].values())
     inds = numpy.arange(n_datapoints)
     n_types = len(data.values())
-    width = .7 / n_types
+    width = .3# / n_types
     bars = []
     for (d, a, b, c) in zip(permute(PERM, data.values()), permute(PERM, min.values()), permute(PERM, max.values()), colors):
         pts = d.values()
         minerr = numpy.subtract(pts, a.values())
         maxerr = numpy.subtract(b.values(), pts)
         bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c, yerr = [minerr, maxerr], ecolor = 'k'))
-        cur_width += width
+        cur_width += width + .1
 
-    ax.set_xticks(inds + width * n_types / 2.0)
-    ax.set_xticklabels(labels, size=10)
+#    ax.set_xticks(inds + width * n_types / 2.0)
+    
+    ax.set_xticks(inds + width / 2.0 + .1 + [(width+.1) * n for n in xrange(n_types)])
+    ax.set_xticklabels([NAME_MAP[x] for x in permute(PERM, data.keys())], size=10)
     ax.set_ylabel('Thousands of transactions per second' + ' per core' if SCALE_CORE else '', rotation=90)
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
-    if not SCALE_CORE:
-        ax.set_aspect(1/900000. * 2)
+#    if not SCALE_CORE:
+    ax.set_aspect(1/60000. * .8)
     # why does this work but not set_ylabel...
     plt.ylabel('Thousands of transactions per second', rotation=90)
     plt.xlim()
-    ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc=get_loc(), prop={'size': 10})
+#    ax.legend([x[0] for x in bars], [NAME_MAP[x] for x in permute(PERM,data.keys())], ncol=4, loc=get_loc(), prop={'size': 10})
     #loc='lower center', bbox_to_anchor=(.9, .05) )
 
     ax.set_title(title)
