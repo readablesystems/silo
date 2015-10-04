@@ -5,7 +5,7 @@
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
 
-#define STD_OP(f) auto& t = *(Transaction*)(txn);	\
+#define STD_OP(f) \
   try { \
     f; \
   } catch (Transaction::Abort E) { \
@@ -23,58 +23,58 @@ public:
   bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	bool ret = mbta.transGet(t, key, value);
+	bool ret = mbta.transGet(key, value);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
 	return ret;
 	  });
   }
 
   const char *put(
-      void *txn,
+      void* txn,
       const std::string &key,
       const std::string &value)
   {
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut<false>(t, key, value);
+        mbta.transPut<false>(key, value);
         return 0;
           });
   }
   
   const char *insert(
-                                         void *txn,
+					 void *txn,
                                          const std::string &key,
                                          const std::string &value)
   {
-    STD_OP(mbta.transInsert<false>(t, key, value); return 0;)
+    STD_OP(mbta.transInsert<false>(key, value); return 0;)
   }
 
   void remove(void *txn, const std::string &key) {
-    STD_OP(mbta.transDelete<false>(t, key));
+    STD_OP(mbta.transDelete<false>(key));
   }
 
   void scan(
-            void *txn,
+  	    void *txn,
             const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transQuery(t, start_key, end, [&] (mbta_type::Str key, std::string& value) {
+    STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
           return callback.invoke(key.data(), key.length(), value);
         }, arena));
   }
 
   void rscan(
-             void *txn,
+	     void *txn,
              const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
 #if 1
     mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transRQuery(t, start_key, end, [&] (mbta_type::Str key, std::string& value) {
+    STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
           return callback.invoke(key.data(), key.length(), value);
         }, arena));
 #endif
@@ -157,17 +157,17 @@ public:
                 str_arena &arena,
                 void *buf,
                 TxnProfileHint hint = HINT_DEFAULT) {
-    Transaction *txn = new (buf) Transaction;
+    Sto::start_transaction();
     thr_arena = &arena;
-    return txn;
+    return NULL;
   }
 
   bool commit_txn(void *txn) {
-    return ((Transaction*)txn)->try_commit();
+    return Sto::try_commit();
   }
 
   void abort_txn(void *txn) {
-    ((Transaction*)txn)->silent_abort();
+    Sto::silent_abort();
   }
 
   abstract_ordered_index *
