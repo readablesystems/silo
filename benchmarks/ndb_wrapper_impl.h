@@ -278,7 +278,7 @@ ndb_wrapper<Transaction>::get_txn_counters(void *txn) const
 
 template <template <typename> class Transaction>
 abstract_ordered_index *
-ndb_wrapper<Transaction>::open_index(const std::string &name, size_t value_size_hint, bool mostly_append)
+ndb_wrapper<Transaction>::open_index(const std::string &name, size_t value_size_hint, bool mostly_append, bool use_hashtable)
 {
   return new ndb_ordered_index<Transaction>(name, value_size_hint, mostly_append);
 }

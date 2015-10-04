@@ -1985,17 +1985,31 @@ private:
            strcmp("oorder_c_id_idx", name) == 0;
   }
 
+  static bool
+  UseHashtable(const char *name)
+  {
+    return strcmp("customer", name) == 0 || 
+	   strcmp("district", name) == 0 ||
+	   strcmp("history", name) == 0 ||
+	   strcmp("item", name) == 0 ||
+           strcmp("oorder", name) == 0 ||
+	   strcmp("stock", name) == 0 ||
+	   strcmp("stock_data", name) == 0 ||
+	   strcmp("warehouse", name) == 0;
+  }
+
   static vector<abstract_ordered_index *>
   OpenTablesForTablespace(abstract_db *db, const char *name, size_t expected_size)
   {
     const bool is_read_only = IsTableReadOnly(name);
     const bool is_append_only = IsTableAppendOnly(name);
+    const bool use_hashtable = UseHashtable(name); 
     const string s_name(name);
     vector<abstract_ordered_index *> ret(NumWarehouses());
     if (g_enable_separate_tree_per_partition && !is_read_only) {
       if (NumWarehouses() <= nthreads) {
         for (size_t i = 0; i < NumWarehouses(); i++)
-          ret[i] = db->open_index(s_name + "_" + to_string(i), expected_size, is_append_only);
+          ret[i] = db->open_index(s_name + "_" + to_string(i), expected_size, is_append_only, use_hashtable);
       } else {
         const unsigned nwhse_per_partition = NumWarehouses() / nthreads;
         for (size_t partid = 0; partid < nthreads; partid++) {
@@ -2003,13 +2017,13 @@ private:
           const unsigned wend   = (partid + 1 == nthreads) ?
             NumWarehouses() : (partid + 1) * nwhse_per_partition;
           abstract_ordered_index *idx =
-            db->open_index(s_name + "_" + to_string(partid), expected_size, is_append_only);
+            db->open_index(s_name + "_" + to_string(partid), expected_size, is_append_only, use_hashtable);
           for (size_t i = wstart; i < wend; i++)
             ret[i] = idx;
         }
       }
     } else {
-      abstract_ordered_index *idx = db->open_index(s_name, expected_size, is_append_only);
+      abstract_ordered_index *idx = db->open_index(s_name, expected_size, is_append_only, use_hashtable);
       for (size_t i = 0; i < NumWarehouses(); i++)
         ret[i] = idx;
     }

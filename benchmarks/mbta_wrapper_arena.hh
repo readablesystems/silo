@@ -176,7 +176,8 @@ public:
   abstract_ordered_index *
   open_index(const std::string &name,
              size_t value_size_hint,
-             bool mostly_append = false) {
+             bool mostly_append = false,
+	     bool use_hashtable = false) {
     auto ret = new mbta_ordered_index(name, this);
     ret->mbta.thread_init();
     return ret;

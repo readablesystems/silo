@@ -4,6 +4,7 @@
 #include "abstract_ordered_index.h"
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
+#include "sto/Hashtable.hh"
 
 #define STD_OP(f) \
   try { \
@@ -103,6 +104,88 @@ private:
 };
 
 
+class ht_ordered_index : public abstract_ordered_index {
+public:
+  ht_ordered_index(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
+    STD_OP({
+	// TODO: we'll still be faster if we just add support for max_bytes_read
+	bool ret = ht.transGet(key, value);
+	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
+	return ret;
+	  });
+  }
+
+  const char *put(
+      void* txn,
+      const std::string &key,
+      const std::string &value)
+  {
+    // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
+    // may be worth investigating if we can use that optimization to avoid copying keys
+    STD_OP({
+        ht.transUpdate(key, value);
+        return 0;
+          });
+  }
+  
+  const char *insert(
+					 void *txn,
+                                         const std::string &key,
+                                         const std::string &value)
+  {
+    STD_OP(ht.transInsert(key, value); return 0;)
+  }
+
+  void remove(void *txn, const std::string &key) {
+    STD_OP(ht.transDelete(key));
+  }
+
+  void scan(
+  	    void *txn,
+            const std::string &start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(
+	     void *txn,
+             const std::string &start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+  typedef Hashtable<std::string, std::string, READ_MY_WRITES/*opacity*/> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+
 class mbta_wrapper : public abstract_db {
 public:
   ssize_t txn_max_batch_size() const OVERRIDE { return 100; }
@@ -173,7 +256,11 @@ public:
   abstract_ordered_index *
   open_index(const std::string &name,
              size_t value_size_hint,
-             bool mostly_append = false) {
+	     bool mostly_append = false,
+             bool use_hashtable = false) {
+    if (use_hashtable) {
+      return new ht_ordered_index(name, this);
+    }
     auto ret = new mbta_ordered_index(name, this);
     return ret;
   }

@@ -550,7 +550,7 @@ kvdb_ordered_index<UseConcurrencyControl>::clear()
 template <bool UseConcurrencyControl>
 abstract_ordered_index *
 kvdb_wrapper<UseConcurrencyControl>::open_index(
-    const std::string &name, size_t value_size_hint, bool mostly_append)
+    const std::string &name, size_t value_size_hint, bool mostly_append, bool use_hashtable)
 {
   return new kvdb_ordered_index<UseConcurrencyControl>(name);
 }

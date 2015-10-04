@@ -48,7 +48,7 @@ bdb_wrapper::abort_txn(void *p)
 }
 
 abstract_ordered_index *
-bdb_wrapper::open_index(const string &name, size_t value_size_hint, bool mostly_append)
+bdb_wrapper::open_index(const string &name, size_t value_size_hint, bool mostly_append, bool use_hashtable)
 {
   Db *db = new Db(env, 0);
   ALWAYS_ASSERT(db->set_flags(DB_TXN_NOT_DURABLE) == 0);

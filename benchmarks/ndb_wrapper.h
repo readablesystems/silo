@@ -100,7 +100,8 @@ public:
   virtual abstract_ordered_index *
   open_index(const std::string &name,
              size_t value_size_hint,
-             bool mostly_append);
+             bool mostly_append,
+	     bool use_hashtable);
 
   virtual void
   close_index(abstract_ordered_index *idx);
