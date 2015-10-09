@@ -1024,7 +1024,7 @@ protected:
               checker::SanityCheckCustomer(&k, &v);
               const size_t sz = Size(v);
               total_sz += sz;
-              tbl_customer(w)->insert(txn, Encode(k), Encode(obj_buf, v));
+              tbl_customer(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
 
               // customer name index
               const customer_name_idx::key k_idx(k.c_w_id, k.c_d_id, v.c_last.str(true), v.c_first.str(true));
@@ -1300,7 +1300,7 @@ tpcc_worker::txn_new_order()
   try {
     ssize_t ret = 0;
     const customer::key k_c(warehouse_id, districtID, customerID);
-    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, Encode(obj_key0, k_c), obj_v));
+    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
     customer::value v_c_temp;
     const customer::value *v_c = Decode(obj_v, v_c_temp);
     checker::SanityCheckCustomer(&k_c, v_c);
@@ -1522,13 +1522,13 @@ tpcc_worker::txn_delivery()
 
       // update customer
       const customer::key k_c(warehouse_id, d, c_id);
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, Encode(obj_key0, k_c), obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
 
       customer::value v_c_temp;
       const customer::value *v_c = Decode(obj_v, v_c_temp);
       customer::value v_c_new(*v_c);
       v_c_new.c_balance += ol_total;
-      tbl_customer(warehouse_id)->put(txn, Encode(str(), k_c), Encode(str(), v_c_new));
+      tbl_customer(warehouse_id)->put(txn, EncodeK(str(), k_c), Encode(str(), v_c_new));
     }
     measure_txn_counters(txn, "txn_delivery");
     if (likely(db->commit_txn(txn)))
@@ -1642,7 +1642,7 @@ tpcc_worker::txn_payment()
       k_c.c_w_id = customerWarehouseID;
       k_c.c_d_id = customerDistrictID;
       k_c.c_id = v_c_idx->c_id;
-      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, Encode(obj_key0, k_c), obj_v));
+      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
 
     } else {
@@ -1651,7 +1651,7 @@ tpcc_worker::txn_payment()
       k_c.c_w_id = customerWarehouseID;
       k_c.c_d_id = customerDistrictID;
       k_c.c_id = customerID;
-      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, Encode(obj_key0, k_c), obj_v));
+      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
     }
     checker::SanityCheckCustomer(&k_c, &v_c);
@@ -1675,7 +1675,7 @@ tpcc_worker::txn_payment()
       NDB_MEMCPY((void *) v_c_new.c_data.data(), &buf[0], v_c_new.c_data.size());
     }
 
-    tbl_customer(customerWarehouseID)->put(txn, Encode(str(), k_c), Encode(str(), v_c_new));
+    tbl_customer(customerWarehouseID)->put(txn, EncodeK(str(), k_c), Encode(str(), v_c_new));
 
     const history::key k_h(k_c.c_d_id, k_c.c_w_id, k_c.c_id, districtID, warehouse_id, ts);
     history::value v_h;
@@ -1787,7 +1787,7 @@ tpcc_worker::txn_order_status()
       k_c.c_w_id = warehouse_id;
       k_c.c_d_id = districtID;
       k_c.c_id = v_c_idx->c_id;
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, Encode(obj_key0, k_c), obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
 
     } else {
@@ -1796,7 +1796,7 @@ tpcc_worker::txn_order_status()
       k_c.c_w_id = warehouse_id;
       k_c.c_d_id = districtID;
       k_c.c_id = customerID;
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, Encode(obj_key0, k_c), obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
     }
     checker::SanityCheckCustomer(&k_c, &v_c);

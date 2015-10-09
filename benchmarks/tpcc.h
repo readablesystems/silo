@@ -5,10 +5,31 @@
 #include "../record/inline_str.h"
 #include "../macros.h"
 
-#define CUSTOMER_KEY_FIELDS(x, y) \
-  x(int32_t,c_w_id) \
-  y(int32_t,c_d_id) \
-  y(int32_t,c_id)
+struct __attribute__((packed)) customer_key {
+    inline customer_key() {
+    }
+    inline customer_key(int32_t w_id, int32_t d_id, int32_t c_id)
+        : c_w_id(w_id), c_d_id(d_id), c_id(c_id) {
+    }
+    inline bool operator==(const customer_key& other) const {
+        return c_w_id == other.c_w_id && c_d_id == other.c_d_id && c_id == other.c_id;
+    }
+    inline bool operator!=(const customer_key& other) const {
+        return !(*this == other);
+    }
+    int32_t c_w_id;
+    int32_t c_d_id;
+    int32_t c_id;
+};
+
+inline lcdf::Str EncodeK(const customer_key& k) {
+    static_assert(sizeof(k) == 12, "bad customer_key size");
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+inline lcdf::Str EncodeK(std::string&, const customer_key& k) {
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+
 #define CUSTOMER_VALUE_FIELDS(x, y) \
   x(float,c_discount) \
   y(inline_str_fixed<2>,c_credit) \
@@ -28,7 +49,7 @@
   y(uint32_t,c_since) \
   y(inline_str_fixed<2>,c_middle) \
   y(inline_str_16<500>,c_data)
-DO_STRUCT(customer, CUSTOMER_KEY_FIELDS, CUSTOMER_VALUE_FIELDS)
+DO_STRUCT2(customer, customer_key, CUSTOMER_VALUE_FIELDS)
 
 #define CUSTOMER_NAME_IDX_KEY_FIELDS(x, y) \
   x(int32_t,c_w_id) \
