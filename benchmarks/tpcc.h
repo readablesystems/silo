@@ -126,12 +126,11 @@ struct __attribute__((packed)) item_key {
     int32_t i_id;
 };
 
-inline lcdf::Str EncodeK(const item_key& k) {
-    static_assert(sizeof(k) == 4, "bad sizeof(item_key)");
-    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+inline uint32_t EncodeK(const item_key& k) {
+    return k.i_id;
 }
-inline lcdf::Str EncodeK(std::string&, const item_key& k) {
-    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+inline uint32_t EncodeK(std::string&, const item_key& k) {
+    return k.i_id;
 }
 
 #define ITEM_VALUE_FIELDS(x, y) \

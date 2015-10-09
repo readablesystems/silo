@@ -30,6 +30,14 @@ public:
       std::string &value,
       size_t max_bytes_read = std::string::npos) = 0;
 
+  virtual bool get(
+      void *txn,
+      uint32_t key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
+  }
+
   class scan_callback {
   public:
     virtual ~scan_callback() {}
@@ -116,6 +124,22 @@ public:
          std::string &&value)
   {
       return insert(txn, key, static_cast<const std::string &>(value));
+  }
+
+  virtual const char *
+  insert(void *txn,
+         uint32_t key,
+         const std::string &value)
+  {
+      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+  virtual const char *
+  insert(void *txn,
+         uint32_t key,
+         std::string &&value)
+  {
+      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
   }
 
   /**
