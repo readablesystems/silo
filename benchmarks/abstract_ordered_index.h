@@ -30,14 +30,6 @@ public:
       std::string &value,
       size_t max_bytes_read = std::string::npos) = 0;
 
-  inline bool get(
-      void* txn,
-      const std::string& key,
-      std::string& value,
-      size_t max_bytes_read = std::string::npos) {
-      return get(txn, key, value, max_bytes_read);
-  }
-
   class scan_callback {
   public:
     virtual ~scan_callback() {}

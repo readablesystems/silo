@@ -667,10 +667,10 @@ class mbtree<P>::search_range_scanner_base {
   }
   void check(const Masstree::scanstackelt<P>& iter,
              const Masstree::key<uint64_t>& key) {
-    int min = std::min(boundary_->length(), key.prefix_length());
+    int min = std::min(boundary_->length(), int(key.prefix_length()));
     int cmp = memcmp(boundary_->data(), key.full_string().data(), min);
     if (!Reverse) {
-      if (cmp < 0 || (cmp == 0 && boundary_->length() <= key.prefix_length()))
+      if (cmp < 0 || (cmp == 0 && size_t(boundary_->length()) <= key.prefix_length()))
         boundary_compar_ = true;
       else if (cmp == 0) {
         uint64_t last_ikey = iter.node()->ikey0_[iter.permutation()[iter.permutation().size() - 1]];
