@@ -1145,7 +1145,7 @@ protected:
             const size_t sz = Size(v_oo);
             oorder_total_sz += sz;
             n_oorders++;
-            tbl_oorder(w)->insert(txn, Encode(k_oo), Encode(obj_buf, v_oo));
+            tbl_oorder(w)->insert(txn, EncodeK(k_oo), Encode(obj_buf, v_oo));
 
             const oorder_c_id_idx::key k_oo_idx(k_oo.o_w_id, k_oo.o_d_id, v_oo.o_c_id, k_oo.o_id);
             const oorder_c_id_idx::value v_oo_idx(0);
@@ -1341,7 +1341,7 @@ tpcc_worker::txn_new_order()
     v_oo.o_entry_d = GetCurrentTimeMillis();
 
     const size_t oorder_sz = Size(v_oo);
-    tbl_oorder(warehouse_id)->insert(txn, Encode(str(), k_oo), Encode(str(), v_oo));
+    tbl_oorder(warehouse_id)->insert(txn, EncodeK(str(), k_oo), Encode(str(), v_oo));
     ret += oorder_sz;
 
     const oorder_c_id_idx::key k_oo_idx(warehouse_id, districtID, customerID, k_no.no_o_id);
@@ -1473,7 +1473,7 @@ tpcc_worker::txn_delivery()
       last_no_o_ids[d - 1] = k_no->no_o_id + 1; // XXX: update last seen
 
       const oorder::key k_oo(warehouse_id, d, k_no->no_o_id);
-      if (unlikely(!tbl_oorder(warehouse_id)->get(txn, Encode(obj_key0, k_oo), obj_v))) {
+      if (unlikely(!tbl_oorder(warehouse_id)->get(txn, EncodeK(obj_key0, k_oo), obj_v))) {
         // even if we read the new order entry, there's no guarantee
         // we will read the oorder entry: in this case the txn will abort,
         // but we're simply bailing out early
@@ -1515,7 +1515,7 @@ tpcc_worker::txn_delivery()
       // update oorder
       oorder::value v_oo_new(*v_oo);
       v_oo_new.o_carrier_id = o_carrier_id;
-      tbl_oorder(warehouse_id)->put(txn, Encode(str(), k_oo), Encode(str(), v_oo_new));
+      tbl_oorder(warehouse_id)->put(txn, EncodeK(str(), k_oo), Encode(str(), v_oo_new));
 
       const uint c_id = v_oo->o_c_id;
       const float ol_total = sum;

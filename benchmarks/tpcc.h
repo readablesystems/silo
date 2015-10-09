@@ -151,17 +151,40 @@ DO_STRUCT2(item, item_key, ITEM_VALUE_FIELDS)
   x(inline_str_fixed<12>,no_dummy)
 DO_STRUCT(new_order, NEW_ORDER_KEY_FIELDS, NEW_ORDER_VALUE_FIELDS)
 
-#define OORDER_KEY_FIELDS(x, y) \
-  x(int32_t,o_w_id) \
-  y(int32_t,o_d_id) \
-  y(int32_t,o_id)
+
+struct __attribute__((packed)) oorder_key {
+    inline oorder_key() {
+    }
+    inline oorder_key(int32_t w_id, int32_t d_id, int32_t o_id)
+        : o_w_id(w_id), o_d_id(d_id), o_id(o_id) {
+    }
+    inline bool operator==(const oorder_key& other) const {
+        return o_w_id == other.o_w_id && o_d_id == other.o_d_id && o_id == other.o_id;
+    }
+    inline bool operator!=(const oorder_key& other) const {
+        return !(*this == other);
+    }
+    int32_t o_w_id;
+    int32_t o_d_id;
+    int32_t o_id;
+};
+
+lcdf::Str EncodeK(const oorder_key& k) {
+    static_assert(sizeof(k) == 12, "bad sizeof(oorder_key)");
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+lcdf::Str EncodeK(std::string&, const oorder_key& k) {
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+
 #define OORDER_VALUE_FIELDS(x, y) \
   x(int32_t,o_c_id) \
   y(int32_t,o_carrier_id) \
   y(int8_t,o_ol_cnt) \
   y(bool,o_all_local) \
   y(uint32_t,o_entry_d)
-DO_STRUCT(oorder, OORDER_KEY_FIELDS, OORDER_VALUE_FIELDS)
+DO_STRUCT2(oorder, oorder_key, OORDER_VALUE_FIELDS)
+
 
 #define OORDER_C_ID_IDX_KEY_FIELDS(x, y) \
   x(int32_t,o_w_id) \
