@@ -675,7 +675,7 @@ protected:
         const size_t sz = Size(v);
         warehouse_total_sz += sz;
         n_warehouses++;
-        tbl_warehouse(i)->insert(txn, Encode(k), Encode(obj_buf, v));
+        tbl_warehouse(i)->insert(txn, EncodeK(k), Encode(obj_buf, v));
 
         warehouses.push_back(v);
       }
@@ -685,7 +685,7 @@ protected:
       for (uint i = 1; i <= NumWarehouses(); i++) {
         const warehouse::key k(i);
         string warehouse_v;
-        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, Encode(k), warehouse_v));
+        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, EncodeK(k), warehouse_v));
         warehouse::value warehouse_temp;
         const warehouse::value *v = Decode(warehouse_v, warehouse_temp);
         ALWAYS_ASSERT(warehouses[i - 1] == *v);
@@ -746,7 +746,7 @@ protected:
         checker::SanityCheckItem(&k, &v);
         const size_t sz = Size(v);
         total_sz += sz;
-        tbl_item(1)->insert(txn, Encode(k), Encode(obj_buf, v)); // this table is shared, so any partition is OK
+        tbl_item(1)->insert(txn, EncodeK(k), Encode(obj_buf, v)); // this table is shared, so any partition is OK
 
         if (bsize != -1 && !(i % bsize)) {
           ALWAYS_ASSERT(db->commit_txn(txn));
@@ -1306,7 +1306,7 @@ tpcc_worker::txn_new_order()
     checker::SanityCheckCustomer(&k_c, v_c);
 
     const warehouse::key k_w(warehouse_id);
-    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, Encode(obj_key0, k_w), obj_v));
+    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, EncodeK(obj_key0, k_w), obj_v));
     warehouse::value v_w_temp;
     const warehouse::value *v_w = Decode(obj_v, v_w_temp);
     checker::SanityCheckWarehouse(&k_w, v_w);
@@ -1355,7 +1355,7 @@ tpcc_worker::txn_new_order()
       const uint ol_quantity = orderQuantities[ol_number - 1];
 
       const item::key k_i(ol_i_id);
-      ALWAYS_ASSERT(tbl_item(1)->get(txn, Encode(obj_key0, k_i), obj_v));
+      ALWAYS_ASSERT(tbl_item(1)->get(txn, EncodeK(obj_key0, k_i), obj_v));
       item::value v_i_temp;
       const item::value *v_i = Decode(obj_v, v_i_temp);
       checker::SanityCheckItem(&k_i, v_i);
@@ -1584,14 +1584,14 @@ tpcc_worker::txn_payment()
     ssize_t ret = 0;
 
     const warehouse::key k_w(warehouse_id);
-    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, Encode(obj_key0, k_w), obj_v));
+    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, EncodeK(obj_key0, k_w), obj_v));
     warehouse::value v_w_temp;
     const warehouse::value *v_w = Decode(obj_v, v_w_temp);
     checker::SanityCheckWarehouse(&k_w, v_w);
 
     warehouse::value v_w_new(*v_w);
     v_w_new.w_ytd += paymentAmount;
-    tbl_warehouse(warehouse_id)->put(txn, Encode(str(), k_w), Encode(str(), v_w_new));
+    tbl_warehouse(warehouse_id)->put(txn, EncodeK(str(), k_w), Encode(str(), v_w_new));
 
     const district::key k_d(warehouse_id, districtID);
     ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));

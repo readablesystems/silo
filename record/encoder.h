@@ -511,6 +511,158 @@ Size(const T &t)
   DO_STRUCT_REST_VALUE(name::value) \
   };
 
+// the main macro
+#define DO_STRUCT2(name, keytype, valuefields) \
+  struct name { \
+  typedef keytype key; \
+  struct value { \
+    inline value() {} \
+    inline value(valuefields(STRUCT_PARAM_FIRST_X, STRUCT_PARAM_REST_X)) : \
+      valuefields(STRUCT_INITLIST_FIRST_X, STRUCT_INITLIST_REST_X) {} \
+    APPLY_X_AND_Y(valuefields, STRUCT_LAYOUT_X) \
+    inline bool \
+    operator==(const struct value &other) const \
+    { \
+      APPLY_X_AND_Y(valuefields, STRUCT_EQ_X) \
+      return true; \
+    } \
+    inline bool \
+    operator!=(const struct value &other) const \
+    { \
+      return !operator==(other); \
+    } \
+    enum { \
+      APPLY_X_AND_Y(valuefields, STRUCT_FIELDPOS_X) \
+      NFIELDS \
+    }; \
+  } PACKED; \
+  struct value_descriptor { \
+    static inline generic_write_fn \
+    write_fn(size_t i) \
+    { \
+      static generic_write_fn write_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_WRITE_FN_X) \
+      }; \
+      return write_fns[i]; \
+    } \
+    static inline generic_read_fn \
+    read_fn(size_t i) \
+    { \
+      static generic_read_fn read_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_READ_FN_X) \
+      }; \
+      return read_fns[i]; \
+    } \
+    static inline generic_failsafe_read_fn \
+    failsafe_read_fn(size_t i) \
+    { \
+      static generic_failsafe_read_fn failsafe_read_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_FAILSAFE_READ_FN_X) \
+      }; \
+      return failsafe_read_fns[i]; \
+    } \
+    static inline generic_nbytes_fn \
+    nbytes_fn(size_t i) \
+    { \
+      static generic_nbytes_fn nbytes_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_NBYTES_FN_X) \
+      }; \
+      return nbytes_fns[i]; \
+    } \
+    static inline generic_skip_fn \
+    skip_fn(size_t i) \
+    { \
+      static generic_skip_fn skip_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_SKIP_FN_X) \
+      }; \
+      return skip_fns[i]; \
+    } \
+    static inline generic_failsafe_skip_fn \
+    failsafe_skip_fn(size_t i) \
+    { \
+      static generic_failsafe_skip_fn failsafe_skip_fns[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_FAILSAFE_SKIP_FN_X) \
+      }; \
+      return failsafe_skip_fns[i]; \
+    } \
+    static inline constexpr size_t \
+    nfields() \
+    { \
+      return static_cast<size_t>(value::NFIELDS); \
+    } \
+    static inline size_t \
+    max_nbytes(size_t i) \
+    { \
+      static size_t maxn[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_MAX_NBYTES_X) \
+      }; \
+      return maxn[i]; \
+    } \
+    static inline size_t \
+    cstruct_offsetof(size_t i) \
+    { \
+      static size_t offsets[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_OFFSETOF_X) \
+      }; \
+      return offsets[i]; \
+    } \
+    static inline size_t \
+    cstruct_sizeof(size_t i) \
+    { \
+      static size_t sizeofs[] = { \
+        APPLY_X_AND_Y(valuefields, DESCRIPTOR_VALUE_SIZEOF_X) \
+      }; \
+      return sizeofs[i]; \
+    } \
+  }; \
+  }; \
+  inline std::ostream & \
+  operator<<(std::ostream &o, const name::value &obj) \
+  { \
+    o << "{" << valuefields(STRUCT_PRINTER_FIRST_X, STRUCT_PRINTER_REST_X) << "}"; \
+    return o; \
+  } \
+  namespace private_ { \
+  template <> \
+  struct is_trivially_destructible< name::value > { \
+    static const bool value = true; \
+  }; \
+  } \
+  template <> \
+  struct encoder< name::value > { \
+  inline void \
+  encode_write(uint8_t *buf, const struct name::value *obj) const \
+  { \
+    APPLY_X_AND_Y(valuefields, SERIALIZE_WRITE_VALUE_FIELD_X) \
+  } \
+  inline void \
+  encode_read(const uint8_t *buf, struct name::value *obj) const \
+  { \
+    APPLY_X_AND_Y(valuefields, SERIALIZE_READ_VALUE_FIELD_X) \
+  } \
+  inline bool \
+  encode_failsafe_read(const uint8_t *buf, size_t nbytes, struct name::value *obj) const \
+  { \
+    APPLY_X_AND_Y(valuefields, SERIALIZE_FAILSAFE_READ_VALUE_FIELD_X) \
+    return true; \
+  } \
+  inline size_t \
+  encode_nbytes(const struct name::value *obj) const \
+  { \
+    size_t size = 0; \
+    APPLY_X_AND_Y(valuefields, SERIALIZE_NBYTES_VALUE_FIELD_X) \
+    return size; \
+  } \
+  static inline constexpr size_t \
+  encode_max_nbytes() \
+  { \
+    return valuefields(SERIALIZE_MAX_NBYTES_VALUE_FIELD_X, \
+                       SERIALIZE_MAX_NBYTES_VALUE_FIELD_Y); \
+  } \
+  DO_STRUCT_COMMON(name::value) \
+  DO_STRUCT_REST_VALUE(name::value) \
+  };
+
 template <typename T>
 struct schema {
   typedef T base_type;

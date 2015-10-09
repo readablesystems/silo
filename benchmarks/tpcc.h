@@ -66,14 +66,36 @@ DO_STRUCT(district, DISTRICT_KEY_FIELDS, DISTRICT_VALUE_FIELDS)
   y(inline_str_8<24>,h_data)
 DO_STRUCT(history, HISTORY_KEY_FIELDS, HISTORY_VALUE_FIELDS)
 
-#define ITEM_KEY_FIELDS(x, y) \
-  x(int32_t,i_id)
+
+struct __attribute__((packed)) item_key {
+    inline item_key() {
+    }
+    inline item_key(int32_t i_id)
+        : i_id(i_id) {
+    }
+    inline bool operator==(const item_key& other) const {
+        return i_id == other.i_id;
+    }
+    inline bool operator!=(const item_key& other) const {
+        return !(*this == other);
+    }
+    int32_t i_id;
+};
+
+inline lcdf::Str EncodeK(const item_key& k) {
+    static_assert(sizeof(k) == 4, "bad sizeof(item_key)");
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+inline lcdf::Str EncodeK(std::string&, const item_key& k) {
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+
 #define ITEM_VALUE_FIELDS(x, y) \
   x(inline_str_8<24>,i_name) \
   y(float,i_price) \
   y(inline_str_8<50>,i_data) \
   y(int32_t,i_im_id)
-DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS)
+DO_STRUCT2(item, item_key, ITEM_VALUE_FIELDS)
 
 #define NEW_ORDER_KEY_FIELDS(x, y) \
   x(int32_t,no_w_id) \
@@ -146,8 +168,30 @@ DO_STRUCT(stock, STOCK_KEY_FIELDS, STOCK_VALUE_FIELDS)
   y(inline_str_fixed<24>,s_dist_10)
 DO_STRUCT(stock_data, STOCK_DATA_KEY_FIELDS, STOCK_DATA_VALUE_FIELDS)
 
-#define WAREHOUSE_KEY_FIELDS(x, y) \
-  x(int32_t,w_id)
+
+struct __attribute__((packed)) warehouse_key {
+    inline warehouse_key() {
+    }
+    inline warehouse_key(int32_t w_id)
+        : w_id(w_id) {
+    }
+    inline bool operator==(const warehouse_key& other) const {
+        return w_id == other.w_id;
+    }
+    inline bool operator!=(const warehouse_key& other) const {
+        return !(*this == other);
+    }
+    int32_t w_id;
+};
+
+lcdf::Str EncodeK(const warehouse_key& k) {
+    static_assert(sizeof(k) == 4, "bad sizeof(warehouse_key)");
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+lcdf::Str EncodeK(std::string&, const warehouse_key& k) {
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+
 #define WAREHOUSE_VALUE_FIELDS(x, y) \
   x(float,w_ytd) \
   y(float,w_tax) \
@@ -157,6 +201,6 @@ DO_STRUCT(stock_data, STOCK_DATA_KEY_FIELDS, STOCK_DATA_VALUE_FIELDS)
   y(inline_str_8<20>,w_city) \
   y(inline_str_fixed<2>,w_state) \
   y(inline_str_fixed<9>,w_zip)
-DO_STRUCT(warehouse, WAREHOUSE_KEY_FIELDS, WAREHOUSE_VALUE_FIELDS)
+DO_STRUCT2(warehouse, warehouse_key, WAREHOUSE_VALUE_FIELDS)
 
 #endif
