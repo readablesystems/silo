@@ -56,22 +56,6 @@ Decode(const char *buf, T &obj)
 }
 
 template <typename T>
-static inline const T *
-PrefixDecode(const std::string &buf, T &obj, size_t prefix)
-{
-  const encoder<T> enc;
-  return enc.prefix_read(buf.data(), &obj, prefix);
-}
-
-template <typename T>
-static inline const T *
-PrefixDecode(const char *buf, T &obj, size_t prefix)
-{
-  const encoder<T> enc;
-  return enc.read(buf, &obj, prefix);
-}
-
-template <typename T>
 static inline size_t
 Size(const T &t)
 {
@@ -122,14 +106,6 @@ Size(const T &t)
     obj->name = trfm(tpe, obj->name); \
   } while (0);
 
-#define SERIALIZE_PREFIX_READ_FIELD(tpe, name, compress, trfm) \
-  do { \
-    buf = serializer< tpe, compress >::read(buf, &obj->name); \
-    obj->name = trfm(tpe, obj->name); \
-    if (++i >= prefix) \
-      return; \
-  } while (0);
-
 #define SERIALIZE_FAILSAFE_READ_FIELD(tpe, name, compress, trfm) \
   do { \
     const uint8_t * const p = \
@@ -156,20 +132,6 @@ Size(const T &t)
 #define SERIALIZE_MAX_NBYTES_VALUE_FIELD_Y(tpe, name) \
   + serializer< tpe, true >::max_nbytes()
 
-#define SERIALIZE_MAX_NBYTES_PREFIX_KEY_FIELD_X(tpe, name) \
-  do { \
-    ret += serializer< tpe, false >::max_nbytes(); \
-    if (++i >= nfields) \
-      return ret; \
-  } while (0);
-
-#define SERIALIZE_MAX_NBYTES_PREFIX_VALUE_FIELD_X(tpe, name) \
-  do { \
-    ret += serializer< tpe, true >::max_nbytes(); \
-    if (++i >= nfields) \
-      return ret; \
-  } while (0);
-
 #define SERIALIZE_WRITE_KEY_FIELD_X(tpe, name) \
   SERIALIZE_WRITE_FIELD(tpe, name, false, HOST_TO_BIG_TRANSFORM)
 #define SERIALIZE_WRITE_VALUE_FIELD_X(tpe, name) \
@@ -179,11 +141,6 @@ Size(const T &t)
   SERIALIZE_READ_FIELD(tpe, name, false, BIG_TO_HOST_TRANSFORM)
 #define SERIALIZE_READ_VALUE_FIELD_X(tpe, name) \
   SERIALIZE_READ_FIELD(tpe, name, true, IDENT_TRANSFORM)
-
-#define SERIALIZE_PREFIX_READ_KEY_FIELD_X(tpe, name) \
-  SERIALIZE_PREFIX_READ_FIELD(tpe, name, false, BIG_TO_HOST_TRANSFORM)
-#define SERIALIZE_PREFIX_READ_VALUE_FIELD_X(tpe, name) \
-  SERIALIZE_PREFIX_READ_FIELD(tpe, name, true, IDENT_TRANSFORM)
 
 #define SERIALIZE_FAILSAFE_READ_KEY_FIELD_X(tpe, name) \
   SERIALIZE_FAILSAFE_READ_FIELD(tpe, name, false, BIG_TO_HOST_TRANSFORM)
@@ -255,12 +212,6 @@ Size(const T &t)
     return obj; \
   } \
   inline ALWAYS_INLINE const struct name * \
-  prefix_read(const uint8_t *buf, struct name *obj, size_t prefix) const \
-  { \
-    encode_prefix_read(buf, obj, prefix); \
-    return obj; \
-  } \
-  inline ALWAYS_INLINE const struct name * \
   failsafe_read(const uint8_t *buf, size_t nbytes, struct name *obj) const \
   { \
     if (unlikely(!encode_failsafe_read(buf, nbytes, obj))) \
@@ -283,12 +234,6 @@ Size(const T &t)
   } \
   inline ALWAYS_INLINE const struct name * \
   read(const uint8_t *buf, struct name *obj) const \
-  { \
-    *obj = *((const struct name *) buf); \
-    return obj; \
-  } \
-  inline ALWAYS_INLINE const struct name * \
-  prefix_read(const uint8_t *buf, struct name *obj, size_t prefix) const \
   { \
     *obj = *((const struct name *) buf); \
     return obj; \
@@ -344,16 +289,6 @@ Size(const T &t)
   read(const char *buf, struct name *obj) const \
   { \
     return read((const uint8_t *) buf, obj); \
-  } \
-  inline ALWAYS_INLINE const struct name * \
-  prefix_read(const std::string &buf, struct name *obj, size_t prefix) const \
-  { \
-    return prefix_read((const uint8_t *) buf.data(), obj, prefix); \
-  } \
-  inline ALWAYS_INLINE const struct name * \
-  prefix_read(const char *buf, struct name *obj, size_t prefix) const \
-  { \
-    return prefix_read((const uint8_t *) buf, obj, prefix); \
   }
 
 #ifdef USE_VARINT_ENCODING
@@ -383,10 +318,6 @@ Size(const T &t)
     { \
       return !operator==(other); \
     } \
-    enum { \
-      APPLY_X_AND_Y(keyfields, STRUCT_FIELDPOS_X) \
-      NFIELDS \
-    }; \
   } PACKED; \
   struct value { \
     inline value() {} \
@@ -519,12 +450,6 @@ Size(const T &t)
   { \
     APPLY_X_AND_Y(keyfields, SERIALIZE_READ_KEY_FIELD_X) \
   } \
-  inline void \
-  encode_prefix_read(const uint8_t *buf, struct name::key *obj, size_t prefix) const \
-  { \
-    size_t i = 0; \
-    APPLY_X_AND_Y(keyfields, SERIALIZE_PREFIX_READ_KEY_FIELD_X) \
-  } \
   inline bool \
   encode_failsafe_read(const uint8_t *buf, size_t nbytes, struct name::key *obj) const \
   { \
@@ -541,16 +466,6 @@ Size(const T &t)
   { \
     return keyfields(SERIALIZE_MAX_NBYTES_KEY_FIELD_X, \
                      SERIALIZE_MAX_NBYTES_KEY_FIELD_Y); \
-  } \
-  inline ALWAYS_INLINE size_t \
-  encode_max_nbytes_prefix(size_t nfields) const \
-  { \
-    size_t ret = 0; \
-    size_t i = 0; \
-    if (likely(nfields >= name::key::NFIELDS)) \
-      return std::numeric_limits<size_t>::max(); \
-    APPLY_X_AND_Y(keyfields, SERIALIZE_MAX_NBYTES_PREFIX_KEY_FIELD_X) \
-    return ret; \
   } \
   DO_STRUCT_COMMON(name::key) \
   DO_STRUCT_ENCODE_REST(name::key) \
@@ -573,12 +488,6 @@ Size(const T &t)
   { \
     APPLY_X_AND_Y(valuefields, SERIALIZE_READ_VALUE_FIELD_X) \
   } \
-  inline void \
-  encode_prefix_read(const uint8_t *buf, struct name::value *obj, size_t prefix) const \
-  { \
-    size_t i = 0; \
-    APPLY_X_AND_Y(valuefields, SERIALIZE_PREFIX_READ_VALUE_FIELD_X) \
-  } \
   inline bool \
   encode_failsafe_read(const uint8_t *buf, size_t nbytes, struct name::value *obj) const \
   { \
@@ -597,16 +506,6 @@ Size(const T &t)
   { \
     return valuefields(SERIALIZE_MAX_NBYTES_VALUE_FIELD_X, \
                        SERIALIZE_MAX_NBYTES_VALUE_FIELD_Y); \
-  } \
-  inline ALWAYS_INLINE size_t \
-  encode_max_nbytes_prefix(size_t nfields) const \
-  { \
-    size_t ret = 0; \
-    size_t i = 0; \
-    if (likely(nfields >= name::value::NFIELDS)) \
-      return std::numeric_limits<size_t>::max(); \
-    APPLY_X_AND_Y(valuefields, SERIALIZE_MAX_NBYTES_PREFIX_VALUE_FIELD_X) \
-    return ret; \
   } \
   DO_STRUCT_COMMON(name::value) \
   DO_STRUCT_REST_VALUE(name::value) \
