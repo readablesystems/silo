@@ -48,7 +48,7 @@ public:
 
   virtual bool get(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       std::string &value,
       size_t max_bytes_read);
 

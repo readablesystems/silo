@@ -305,7 +305,7 @@ template <template <typename> class Transaction>
 bool
 ndb_ordered_index<Transaction>::get(
     void *txn,
-    const std::string &key,
+    lcdf::Str key,
     std::string &value, size_t max_bytes_read)
 {
   PERF_DECL(static std::string probe1_name(std::string(__PRETTY_FUNCTION__) + std::string(":total:")));

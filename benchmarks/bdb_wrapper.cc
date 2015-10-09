@@ -74,11 +74,11 @@ bdb_ordered_index::~bdb_ordered_index()
 bool
 bdb_ordered_index::get(
     void *txn,
-    const string &key,
+    lcdf::Str key,
     string &value,
     size_t max_bytes_read)
 {
-  Dbt kdbt((void *) key.data(), key.size());
+  Dbt kdbt((void *) key.data(), key.length());
   Dbt vdbt;
   //vdbt.set_flags(DB_DBT_MALLOC);
   int retno = db->get((DbTxn *) txn, &kdbt, &vdbt, 0);

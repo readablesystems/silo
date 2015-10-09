@@ -19,7 +19,7 @@ class mbta_ordered_index : public abstract_ordered_index {
 public:
   mbta_ordered_index(const std::string &name, mbta_wrapper *db) : mbta(), name(name), db(db) {}
 
-  bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
+  bool get(void *txn, Str key_data, std::string &value, size_t max_bytes_read) {
     (void)max_bytes_read;
 #if 0
     try {

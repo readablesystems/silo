@@ -24,7 +24,7 @@ std::atomic<long> mt_rscan(0);
 std::atomic<long> ht_get(0);
 std::atomic<long> ht_put(0);
 std::atomic<long> ht_del(0);
-#endif 
+#endif
 
 class mbta_wrapper;
 
@@ -34,7 +34,7 @@ public:
 
   std::string *arena(void);
 
-  bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
+    bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
 #if OP_LOGGING
     mt_get++;
 #endif
@@ -138,10 +138,10 @@ public:
 
   std::string *arena(void);
 
-  bool get(void *txn, const std::string &key, std::string &value, size_t max_bytes_read) {
+  bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
 #if OP_LOGGING
     ht_get++;
-#endif    
+#endif
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
 	bool ret = ht.transGet(key, value);

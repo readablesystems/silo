@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <map>
+#include "sto/masstree-beta/str.hh"
 
 #include "../macros.h"
 #include "../str_arena.h"
@@ -25,9 +26,17 @@ public:
    */
   virtual bool get(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       std::string &value,
       size_t max_bytes_read = std::string::npos) = 0;
+
+  inline bool get(
+      void* txn,
+      const std::string& key,
+      std::string& value,
+      size_t max_bytes_read = std::string::npos) {
+      return get(txn, key, value, max_bytes_read);
+  }
 
   class scan_callback {
   public:

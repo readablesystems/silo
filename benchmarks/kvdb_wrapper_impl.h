@@ -313,7 +313,7 @@ template <bool UseConcurrencyControl>
 bool
 kvdb_ordered_index<UseConcurrencyControl>::get(
     void *txn,
-    const std::string &key,
+    lcdf::Str key,
     std::string &value, size_t max_bytes_read)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
@@ -333,7 +333,7 @@ template <bool UseConcurrencyControl>
 const char *
 kvdb_ordered_index<UseConcurrencyControl>::put(
     void *txn,
-    const std::string &key,
+    const std::string& key,
     const std::string &value)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;

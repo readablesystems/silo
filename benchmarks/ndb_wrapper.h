@@ -119,7 +119,7 @@ public:
   ndb_ordered_index(const std::string &name, size_t value_size_hint, bool mostly_append);
   virtual bool get(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       std::string &value, size_t max_bytes_read);
   virtual const char * put(
       void *txn,
