@@ -123,38 +123,35 @@ public:
       std::string &value, size_t max_bytes_read);
   virtual const char * put(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       const std::string &value);
   virtual const char * put(
       void *txn,
-      std::string &&key,
+      lcdf::Str key,
       std::string &&value);
   virtual const char *
   insert(void *txn,
-         const std::string &key,
+         lcdf::Str key,
          const std::string &value);
   virtual const char *
   insert(void *txn,
-         std::string &&key,
+         lcdf::Str key,
          std::string &&value);
   virtual void scan(
       void *txn,
-      const std::string &start_key,
+      lcdf::Str start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);
   virtual void rscan(
       void *txn,
-      const std::string &start_key,
+      lcdf::Str start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);
   virtual void remove(
       void *txn,
-      const std::string &key);
-  virtual void remove(
-      void *txn,
-      std::string &&key);
+      lcdf::Str key);
   virtual size_t size() const;
   virtual std::map<std::string, uint64_t> clear();
 private:

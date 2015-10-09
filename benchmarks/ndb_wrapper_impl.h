@@ -339,7 +339,7 @@ template <template <typename> class Transaction>
 const char *
 ndb_ordered_index<Transaction>::put(
     void *txn,
-    const std::string &key,
+    lcdf::Str key,
     const std::string &value)
 {
   PERF_DECL(static std::string probe1_name(std::string(__PRETTY_FUNCTION__) + std::string(":total:")));
@@ -369,7 +369,7 @@ template <template <typename> class Transaction>
 const char *
 ndb_ordered_index<Transaction>::put(
     void *txn,
-    std::string &&key,
+    lcdf::Str key,
     std::string &&value)
 {
   ndbtxn * const p = reinterpret_cast<ndbtxn *>(txn);
@@ -397,7 +397,7 @@ template <template <typename> class Transaction>
 const char *
 ndb_ordered_index<Transaction>::insert(
     void *txn,
-    const std::string &key,
+    lcdf::Str key,
     const std::string &value)
 {
   PERF_DECL(static std::string probe1_name(std::string(__PRETTY_FUNCTION__) + std::string(":total:")));
@@ -427,7 +427,7 @@ template <template <typename> class Transaction>
 const char *
 ndb_ordered_index<Transaction>::insert(
     void *txn,
-    std::string &&key,
+    lcdf::Str key,
     std::string &&value)
 {
   ndbtxn * const p = reinterpret_cast<ndbtxn *>(txn);
@@ -472,7 +472,7 @@ template <template <typename> class Transaction>
 void
 ndb_ordered_index<Transaction>::scan(
     void *txn,
-    const std::string &start_key,
+    lcdf::Str start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -504,7 +504,7 @@ template <template <typename> class Transaction>
 void
 ndb_ordered_index<Transaction>::rscan(
     void *txn,
-    const std::string &start_key,
+    lcdf::Str start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -532,7 +532,7 @@ ndb_ordered_index<Transaction>::rscan(
 
 template <template <typename> class Transaction>
 void
-ndb_ordered_index<Transaction>::remove(void *txn, const std::string &key)
+ndb_ordered_index<Transaction>::remove(void *txn, lcdf::Str key)
 {
   PERF_DECL(static std::string probe1_name(std::string(__PRETTY_FUNCTION__) + std::string(":total:")));
   ANON_REGION(probe1_name.c_str(), &private_::ndb_remove_probe0_cg);
@@ -543,30 +543,6 @@ ndb_ordered_index<Transaction>::remove(void *txn, const std::string &key)
     { \
       auto t = cast< b >()(p); \
       btr.remove(*t, key); \
-      return; \
-    }
-    switch (p->hint) {
-      TXN_PROFILE_HINT_OP(MY_OP_X)
-    default:
-      ALWAYS_ASSERT(false);
-    }
-#undef MY_OP_X
-  } catch (transaction_abort_exception &ex) {
-    throw abstract_db::abstract_abort_exception();
-  }
-}
-
-template <template <typename> class Transaction>
-void
-ndb_ordered_index<Transaction>::remove(void *txn, std::string &&key)
-{
-  ndbtxn * const p = reinterpret_cast<ndbtxn *>(txn);
-  try {
-#define MY_OP_X(a, b) \
-  case a: \
-    { \
-      auto t = cast< b >()(p); \
-      btr.remove(*t, std::move(key)); \
       return; \
     }
     switch (p->hint) {

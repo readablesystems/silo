@@ -54,12 +54,12 @@ public:
 
   virtual const char * put(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       const std::string &value);
 
   virtual void scan(
       void *txn,
-      const std::string &key,
+      lcdf::Str key,
       const std::string *value,
       scan_callback &callback,
       str_arena *arena)
@@ -69,7 +69,7 @@ public:
 
   virtual void rscan(
       void *txn,
-      const std::string &start_key,
+      lcdf::Str start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena)

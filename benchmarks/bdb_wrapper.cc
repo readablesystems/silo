@@ -91,7 +91,7 @@ bdb_ordered_index::get(
 const char *
 bdb_ordered_index::put(
     void *txn,
-    const string &key,
+    lcdf::Str key,
     const string &value)
 {
   Dbt kdbt((void *) key.data(), key.size());

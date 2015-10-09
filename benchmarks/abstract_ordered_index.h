@@ -50,7 +50,7 @@ public:
    */
   virtual void scan(
       void *txn,
-      const std::string &start_key,
+      lcdf::Str start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
@@ -62,7 +62,7 @@ public:
    */
   virtual void rscan(
       void *txn,
-      const std::string &start_key,
+      lcdf::Str start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
@@ -83,16 +83,15 @@ public:
    */
   virtual const char *
   put(void *txn,
-      const std::string &key,
+      lcdf::Str key,
       const std::string &value) = 0;
 
   virtual const char *
   put(void *txn,
-      std::string &&key,
+      lcdf::Str key,
       std::string &&value)
   {
-    return put(txn, static_cast<const std::string &>(key),
-                    static_cast<const std::string &>(value));
+      return put(txn, key, static_cast<const std::string &>(value));
   }
 
   /**
@@ -105,7 +104,7 @@ public:
    */
   virtual const char *
   insert(void *txn,
-         const std::string &key,
+         lcdf::Str key,
          const std::string &value)
   {
     return put(txn, key, value);
@@ -113,11 +112,10 @@ public:
 
   virtual const char *
   insert(void *txn,
-         std::string &&key,
+         lcdf::Str key,
          std::string &&value)
   {
-    return insert(txn, static_cast<const std::string &>(key),
-                       static_cast<const std::string &>(value));
+      return insert(txn, key, static_cast<const std::string &>(value));
   }
 
   /**
@@ -125,16 +123,9 @@ public:
    */
   virtual void remove(
       void *txn,
-      const std::string &key)
+      lcdf::Str key)
   {
     put(txn, key, "");
-  }
-
-  virtual void remove(
-      void *txn,
-      std::string &&key)
-  {
-    remove(txn, static_cast<const std::string &>(key));
   }
 
   /**

@@ -46,10 +46,9 @@ public:
 	  });
   }
 
-  const char *put(
-      void* txn,
-      const std::string &key,
-      const std::string &value)
+  const char *put(void* txn,
+                  lcdf::Str key,
+                  const std::string &value)
   {
 #if OP_LOGGING
     mt_put++;
@@ -62,10 +61,9 @@ public:
           });
   }
   
-  const char *insert(
-					 void *txn,
-                                         const std::string &key,
-                                         const std::string &value)
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
   {
     STD_OP(mbta.transInsert<false>(key, value); return 0;)
   }
@@ -77,9 +75,8 @@ public:
      STD_OP(mbta.transDelete<false>(key));
   }
 
-  void scan(
-  	    void *txn,
-            const std::string &start_key,
+  void scan(void *txn,
+            lcdf::Str start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -92,9 +89,8 @@ public:
         }, arena));
   }
 
-  void rscan(
-	     void *txn,
-             const std::string &start_key,
+  void rscan(void *txn,
+             lcdf::Str start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -152,7 +148,7 @@ public:
 
   const char *put(
       void* txn,
-      const std::string &key,
+      lcdf::Str key,
       const std::string &value)
   {
 #if OP_LOGGING
@@ -166,33 +162,30 @@ public:
           });
   }
   
-  const char *insert(
-					 void *txn,
-                                         const std::string &key,
-                                         const std::string &value)
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
   {
     STD_OP(ht.transInsert(key, value); return 0;)
   }
 
-  void remove(void *txn, const std::string &key) {
+    void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
     ht_del++;
 #endif    
     STD_OP(ht.transDelete(key));
   }
 
-  void scan(
-  	    void *txn,
-            const std::string &start_key,
+  void scan(void *txn,
+            lcdf::Str start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
     NDB_UNIMPLEMENTED("scan");
   }
 
-  void rscan(
-	     void *txn,
-             const std::string &start_key,
+  void rscan(void *txn,
+             lcdf::Str start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {

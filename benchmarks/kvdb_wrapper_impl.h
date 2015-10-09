@@ -254,7 +254,7 @@ struct basic_kvdb_record : public record_version<UseConcurrencyControl> {
   }
 
   inline bool
-  do_write(const std::string &s)
+  do_write(lcdf::Str s)
   {
     INVARIANT(!UseConcurrencyControl || this->is_locked());
     if (unlikely(s.size() > alloc_size))
@@ -333,7 +333,7 @@ template <bool UseConcurrencyControl>
 const char *
 kvdb_ordered_index<UseConcurrencyControl>::put(
     void *txn,
-    const std::string& key,
+    lcdf::Str key,
     const std::string &value)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
@@ -365,8 +365,8 @@ kvdb_ordered_index<UseConcurrencyControl>::put(
 template <bool UseConcurrencyControl>
 const char *
 kvdb_ordered_index<UseConcurrencyControl>::insert(void *txn,
-                           const std::string &key,
-                           const std::string &value)
+                                                  lcdf::Str key,
+                                                  const std::string &value)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
   ANON_REGION("kvdb_ordered_index::insert:", &private_::kvdb_insert_probe0_cg);
@@ -408,7 +408,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::scan(
     void *txn,
-    const std::string &start_key,
+    lcdf::Str start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -423,7 +423,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::rscan(
     void *txn,
-    const std::string &start_key,
+    lcdf::Str start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -436,7 +436,7 @@ kvdb_ordered_index<UseConcurrencyControl>::rscan(
 
 template <bool UseConcurrencyControl>
 void
-kvdb_ordered_index<UseConcurrencyControl>::remove(void *txn, const std::string &key)
+kvdb_ordered_index<UseConcurrencyControl>::remove(void *txn, lcdf::Str key)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
   ANON_REGION("kvdb_ordered_index::remove:", &private_::kvdb_remove_probe0_cg);
