@@ -843,8 +843,8 @@ protected:
             const size_t sz = Size(v);
             stock_total_sz += sz;
             n_stocks++;
-            tbl_stock(w)->insert(txn, Encode(k), Encode(obj_buf, v));
-            tbl_stock_data(w)->insert(txn, Encode(k_data), Encode(obj_buf1, v_data));
+            tbl_stock(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
+            tbl_stock_data(w)->insert(txn, EncodeK(k_data), Encode(obj_buf1, v_data));
           }
           if (db->commit_txn(txn)) {
             b++;
@@ -919,7 +919,7 @@ protected:
           const size_t sz = Size(v);
           district_total_sz += sz;
           n_districts++;
-          tbl_district(w)->insert(txn, Encode(k), Encode(obj_buf, v));
+          tbl_district(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
 
           if (bsize != -1 && !((cnt + 1) % bsize)) {
             ALWAYS_ASSERT(db->commit_txn(txn));
@@ -1312,7 +1312,7 @@ tpcc_worker::txn_new_order()
     checker::SanityCheckWarehouse(&k_w, v_w);
 
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
@@ -1329,7 +1329,7 @@ tpcc_worker::txn_new_order()
     if (!g_new_order_fast_id_gen) {
       district::value v_d_new(*v_d);
       v_d_new.d_next_o_id++;
-      tbl_district(warehouse_id)->put(txn, Encode(str(), k_d), Encode(str(), v_d_new));
+      tbl_district(warehouse_id)->put(txn, EncodeK(str(), k_d), Encode(str(), v_d_new));
     }
 
     const oorder::key k_oo(warehouse_id, districtID, k_no.no_o_id);
@@ -1361,7 +1361,7 @@ tpcc_worker::txn_new_order()
       checker::SanityCheckItem(&k_i, v_i);
 
       const stock::key k_s(ol_supply_w_id, ol_i_id);
-      ALWAYS_ASSERT(tbl_stock(ol_supply_w_id)->get(txn, Encode(obj_key0, k_s), obj_v));
+      ALWAYS_ASSERT(tbl_stock(ol_supply_w_id)->get(txn, EncodeK(obj_key0, k_s), obj_v));
       stock::value v_s_temp;
       const stock::value *v_s = Decode(obj_v, v_s_temp);
       checker::SanityCheckStock(&k_s, v_s);
@@ -1374,7 +1374,7 @@ tpcc_worker::txn_new_order()
       v_s_new.s_ytd += ol_quantity;
       v_s_new.s_remote_cnt += (ol_supply_w_id == warehouse_id) ? 0 : 1;
 
-      tbl_stock(ol_supply_w_id)->put(txn, Encode(str(), k_s), Encode(str(), v_s_new));
+      tbl_stock(ol_supply_w_id)->put(txn, EncodeK(str(), k_s), Encode(str(), v_s_new));
 
       const order_line::key k_ol(warehouse_id, districtID, k_no.no_o_id, ol_number);
       order_line::value v_ol;
@@ -1594,14 +1594,14 @@ tpcc_worker::txn_payment()
     tbl_warehouse(warehouse_id)->put(txn, EncodeK(str(), k_w), Encode(str(), v_w_new));
 
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
 
     district::value v_d_new(*v_d);
     v_d_new.d_ytd += paymentAmount;
-    tbl_district(warehouse_id)->put(txn, Encode(str(), k_d), Encode(str(), v_d_new));
+    tbl_district(warehouse_id)->put(txn, EncodeK(str(), k_d), Encode(str(), v_d_new));
 
     customer::key k_c;
     customer::value v_c;
@@ -1905,7 +1905,7 @@ tpcc_worker::txn_stock_level()
   // locking is un-necessary (since we can just read from some old snapshot)
   try {
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
@@ -1934,7 +1934,7 @@ tpcc_worker::txn_stock_level()
         INVARIANT(p.first >= 1 && p.first <= NumItems());
         {
           ANON_REGION("StockLevelLoopJoinGet:", &stock_level_probe2_cg);
-          ALWAYS_ASSERT(tbl_stock(warehouse_id)->get(txn, Encode(obj_key0, k_s), obj_v, nbytesread));
+          ALWAYS_ASSERT(tbl_stock(warehouse_id)->get(txn, EncodeK(obj_key0, k_s), obj_v, nbytesread));
         }
         INVARIANT(obj_v.size() <= nbytesread);
         const uint8_t *ptr = (const uint8_t *) obj_v.data();
