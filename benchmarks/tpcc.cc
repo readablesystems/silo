@@ -746,7 +746,7 @@ protected:
         checker::SanityCheckItem(&k, &v);
         const size_t sz = Size(v);
         total_sz += sz;
-        tbl_item(1)->insert(txn, EncodeK(k), Encode(obj_buf, v)); // this table is shared, so any partition is OK
+        tbl_item(1)->insert(txn, k.i_id, Encode(obj_buf, v)); // this table is shared, so any partition is OK
 
         if (bsize != -1 && !(i % bsize)) {
           ALWAYS_ASSERT(db->commit_txn(txn));
@@ -1355,7 +1355,7 @@ tpcc_worker::txn_new_order()
       const uint ol_quantity = orderQuantities[ol_number - 1];
 
       const item::key k_i(ol_i_id);
-      ALWAYS_ASSERT(tbl_item(1)->get(txn, EncodeK(obj_key0, k_i), obj_v));
+      ALWAYS_ASSERT(tbl_item(1)->get(txn, k_i.i_id, obj_v));
       item::value v_i_temp;
       const item::value *v_i = Decode(obj_v, v_i_temp);
       checker::SanityCheckItem(&k_i, v_i);
@@ -1988,14 +1988,16 @@ private:
   static bool
   UseHashtable(const char *name)
   {
-    return strcmp("customer", name) == 0 || 
-	   strcmp("district", name) == 0 ||
-	   strcmp("history", name) == 0 ||
+    //return false;
+    return //strcmp("customer", name) == 0 || 
+	   //strcmp("district", name) == 0 ||
+	   //strcmp("history", name) == 0 ||
 	   strcmp("item", name) == 0 ||
-           strcmp("oorder", name) == 0 ||
-	   strcmp("stock", name) == 0 ||
-	   strcmp("stock_data", name) == 0 ||
-	   strcmp("warehouse", name) == 0;
+           //strcmp("oorder", name) == 0 ||
+	   //strcmp("stock", name) == 0 ||
+	   //strcmp("stock_data", name) == 0 ||
+	   //strcmp("warehouse", name) == 0 ||
+	0;
   }
 
   static vector<abstract_ordered_index *>

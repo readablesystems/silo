@@ -32,7 +32,7 @@ public:
 
   virtual bool get(
       void *txn,
-      uint32_t key,
+      int32_t key,
       std::string &value,
       size_t max_bytes_read = std::string::npos) {
       return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
@@ -102,6 +102,23 @@ public:
       return put(txn, key, static_cast<const std::string &>(value));
   }
 
+  virtual const char *
+  put(void *txn,
+         int32_t key,
+         const std::string &value)
+  {
+      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+  virtual const char *
+  put(void *txn,
+         int32_t key,
+         std::string &&value)
+  {
+      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+
   /**
    * Insert a key of length keylen.
    *
@@ -128,7 +145,7 @@ public:
 
   virtual const char *
   insert(void *txn,
-         uint32_t key,
+         int32_t key,
          const std::string &value)
   {
       return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
@@ -136,7 +153,7 @@ public:
 
   virtual const char *
   insert(void *txn,
-         uint32_t key,
+         int32_t key,
          std::string &&value)
   {
       return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
@@ -151,6 +168,14 @@ public:
   {
     put(txn, key, "");
   }
+
+  virtual void remove(
+      void *txn,
+      int32_t key)
+  {
+    put(txn, key, "");
+  }
+
 
   /**
    * Only an estimate, not transactional!

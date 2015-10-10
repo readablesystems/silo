@@ -5,6 +5,8 @@
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
 #include "sto/Hashtable.hh"
+#include <unordered_map> 
+//#include "tpcc.h"
 
 #define STD_OP(f) \
   try { \
@@ -13,7 +15,7 @@
     throw abstract_db::abstract_abort_exception(); \
   }
 
-#define OP_LOGGING 1
+#define OP_LOGGING 0
 
 #if OP_LOGGING
 std::atomic<long> mt_get(0);
@@ -23,8 +25,23 @@ std::atomic<long> mt_scan(0);
 std::atomic<long> mt_rscan(0);
 std::atomic<long> ht_get(0);
 std::atomic<long> ht_put(0);
+std::atomic<long> ht_insert(0);
 std::atomic<long> ht_del(0);
 #endif
+
+/*namespace std
+{
+  template<>
+  struct hash<item::key>
+  {
+     typedef item::key argument_type;
+     typedef std::size_t result_type;
+
+     result_type operator()(argument_type const& s) const {
+       return (std::hash<int32_t>()(s.i_id));
+     }
+  };
+}*/
 
 class mbta_wrapper;
 
@@ -40,7 +57,7 @@ public:
 #endif
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	bool ret = mbta.transGet(key, value);
+        bool ret = mbta.transGet(key, value);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
 	return ret;
 	  });
@@ -127,10 +144,9 @@ private:
 
 };
 
-
-class ht_ordered_index : public abstract_ordered_index {
+class ht_ordered_index_string : public abstract_ordered_index {
 public:
-  ht_ordered_index(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+  ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
 
   std::string *arena(void);
 
@@ -140,8 +156,11 @@ public:
 #endif
     STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-	bool ret = ht.transGet(key, value);
-	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
+        bool ret = ht.read(key, value);
+	//auto it = ht.find(key);
+ 	//bool ret = it != ht.end();
+	//value = it->second;
+        // TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
 	return ret;
 	  });
   }
@@ -157,23 +176,31 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        ht.transUpdate(key, value);
+	ht.put(key, value);
+        //ht[key] = value;
         return 0;
           });
   }
-  
+
   const char *insert(void *txn,
                      lcdf::Str key,
                      const std::string &value)
   {
-    STD_OP(ht.transInsert(key, value); return 0;)
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+	ht.transInsert(key, value); return 0;
+	});
   }
 
-    void remove(void *txn, lcdf::Str key) {
+  void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
     ht_del++;
 #endif    
-    STD_OP(ht.transDelete(key));
+    STD_OP({
+	ht.transDelete(key);
+    });
   }
 
   void scan(void *txn,
@@ -203,7 +230,128 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<std::string, std::string, READ_MY_WRITES/*opacity*/, 10000000> ht_type;
+  typedef Hashtable<std::string, std::string, READ_MY_WRITES/*opacity*/, 1000000> ht_type;
+  //typedef std::unordered_map<K, std::string> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_int : public abstract_ordered_index {
+public:
+  ht_ordered_index_int(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
+    return false;
+  }
+
+  bool get(
+      void *txn,
+      int32_t key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        bool ret = ht.read(key, value);
+        return ret;
+          });
+
+  }
+
+
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+    return 0;
+  }
+
+  const char *put(
+      void* txn,
+      int32_t key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        ht.put(key, value);
+        return 0;
+          });
+  }
+
+  
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+    return 0;
+  }
+
+  const char *insert(void *txn,
+                     int32_t key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        ht.transInsert(key, value); return 0;});
+  }
+
+
+  void remove(void *txn, lcdf::Str key) {
+      return;
+  }
+
+  void remove(void *txn, int32_t key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        ht.transDelete(key);});
+  }     
+
+  void scan(void *txn,
+            lcdf::Str start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             lcdf::Str start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+  typedef Hashtable<int32_t, std::string, READ_MY_WRITES/*opacity*/, 1000000> ht_type;
+  //typedef std::unordered_map<K, std::string> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -239,9 +387,10 @@ public:
     }
 
 #endif
-
+    std::cout << "Find traversal: " << ct << std::endl;
+    std::cout << "Max traversal: " << max_ct << std::endl;
 #if OP_LOGGING
-    printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_del.load());
+    printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
 #endif 
     //txn_epoch_sync<Transaction>::finish();
   }
@@ -299,7 +448,7 @@ public:
 	     bool mostly_append = false,
              bool use_hashtable = false) {
     if (use_hashtable) {
-      return new ht_ordered_index(name, this);
+      return new ht_ordered_index_int(name, this);
     }
     auto ret = new mbta_ordered_index(name, this);
     return ret;
