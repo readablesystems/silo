@@ -5,7 +5,6 @@
 #include "txn.h"
 #include "lockguard.h"
 #include "util.h"
-#include "ndb_type_traits.h"
 
 #include <string>
 #include <map>
