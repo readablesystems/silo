@@ -10,26 +10,17 @@
 #include <memory>
 
 #include "core.h"
-#include "btree.h"
-#include "btree_impl.h"
 #include "thread.h"
 #include "txn.h"
 #include "util.h"
 #include "scopedperf.hh"
-
-#if defined(NDB_MASSTREE)
 #include "masstree_btree.h"
+
 struct testing_concurrent_btree_traits : public masstree_params {
   static const bool RcuRespCaller = false;
 };
 typedef mbtree<testing_concurrent_btree_traits> testing_concurrent_btree;
 #define HAVE_REVERSE_RANGE_SCANS
-#else
-struct testing_concurrent_btree_traits : public concurrent_btree_traits {
-  static const bool RcuRespCaller = false;
-};
-typedef btree<testing_concurrent_btree_traits> testing_concurrent_btree;
-#endif
 
 using namespace std;
 using namespace util;

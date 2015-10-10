@@ -1,7 +1,7 @@
 #ifndef _NDB_BASE_TXN_BTREE_H_
 #define _NDB_BASE_TXN_BTREE_H_
 
-#include "btree_choice.h"
+#include "masstree_btree.h"
 #include "txn.h"
 #include "lockguard.h"
 #include "util.h"

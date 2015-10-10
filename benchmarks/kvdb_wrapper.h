@@ -2,7 +2,7 @@
 #define _KVDB_WRAPPER_H_
 
 #include "abstract_db.h"
-#include "../btree_choice.h"
+#include "../masstree_btree.h"
 #include "../rcu.h"
 
 template <bool UseConcurrencyControl>
