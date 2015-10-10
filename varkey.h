@@ -86,32 +86,8 @@ public:
     return !operator<=(that);
   }
 
-  inline uint64_t
-  slice() const
-  {
-    uint64_t ret = 0;
-    uint8_t *rp = (uint8_t *) &ret;
-    for (size_t i = 0; i < std::min(l, size_t(8)); i++)
-      rp[i] = p[i];
-    return util::host_endian_trfm<uint64_t>()(ret);
-  }
-
   inline uint64_t slice_at(int pos) const {
     return string_slice<uint64_t>::make_comparable((const char*) p + pos, std::min(int(l - pos), 8));
-  }
-
-  inline varkey
-  shift() const
-  {
-    INVARIANT(l >= 8);
-    return varkey(p + 8, l - 8);
-  }
-
-  inline varkey
-  shift_many(size_t n) const
-  {
-    INVARIANT(l >= 8 * n);
-    return varkey(p + 8 * n, l - 8 * n);
   }
 
   inline size_t
