@@ -14,14 +14,10 @@
 #include "../allocator.h"
 #include "../stats_server.h"
 #include "bench.h"
-#include "bdb_wrapper.h"
 #include "ndb_wrapper.h"
 #include "ndb_wrapper_impl.h"
 #include "kvdb_wrapper.h"
 #include "kvdb_wrapper_impl.h"
-#if !NO_MYSQL
-#include "mysql_wrapper.h"
-#endif
 #include "mbta_wrapper.hh"
 
 using namespace std;
@@ -276,12 +272,7 @@ main(int argc, char **argv)
   }
 #endif
 
-  if (db_type == "bdb") {
-    const string cmd = "rm -rf " + basedir + "/db/*";
-    // XXX(stephentu): laziness
-    int ret UNUSED = system(cmd.c_str());
-    db = new bdb_wrapper("db", bench_type + ".db");
-  } else if (db_type == "ndb-proto1") {
+  if (db_type == "ndb-proto1") {
     // XXX: hacky simulation of proto1
     db = new ndb_wrapper<transaction_proto2>(
         logfiles, assignments, !nofsync, do_compress, fake_writes);
@@ -307,11 +298,6 @@ main(int argc, char **argv)
     db = new kvdb_wrapper<true>;
   } else if (db_type == "kvdb-st") {
     db = new kvdb_wrapper<false>;
-#if !NO_MYSQL
-  } else if (db_type == "mysql") {
-    string dbdir = basedir + "/mysql-db";
-    db = new mysql_wrapper(dbdir, bench_type);
-#endif
   } else if (db_type == "mbta") {
     db = new mbta_wrapper;
   } else

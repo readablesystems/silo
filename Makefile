@@ -11,9 +11,6 @@ CHECK_INVARIANTS ?= 0
 # 3 = flow
 USE_MALLOC_MODE ?= 1
 
-MYSQL ?= 1
-MYSQL_SHARE_DIR ?= /x/stephentu/mysql-5.5.29/build/sql/share
-
 # Available modes
 #   * perf
 #   * backoff
@@ -78,7 +75,7 @@ else
 endif
 
 CXXFLAGS := -g -Wall -std=c++0x
-CXXFLAGS += -MD -Ithird-party/lz4 -DCONFIG_H=\"$(CONFIG_H)\"
+CXXFLAGS += -MD -MP -Ithird-party/lz4 -DCONFIG_H=\"$(CONFIG_H)\"
 ifeq ($(DEBUG_S),1)
         CXXFLAGS += -fno-omit-frame-pointer -DDEBUG
 else
@@ -90,7 +87,7 @@ endif
 ifeq ($(EVENT_COUNTERS_S),1)
 	CXXFLAGS += -DENABLE_EVENT_COUNTERS
 endif
-CXXFLAGS += -DNDB_MASSTREE -include masstree/config.h
+CXXFLAGS += -include masstree/config.h
 OBJDEP += masstree/config.h
 O := $(O).masstree
 CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
@@ -147,10 +144,9 @@ OBJFILES := $(patsubst %.cc, $(O)/%.o, $(SRCFILES))
 MASSTREE_OBJFILES := $(patsubst masstree/%.cc, $(O)/%.o, $(MASSTREE_SRCFILES))
 
 BENCH_CXXFLAGS := $(CXXFLAGS)
-BENCH_LDFLAGS := $(LDFLAGS) -ldb_cxx -lz -lrt -lcrypt -laio -ldl -lssl -lcrypto
+BENCH_LDFLAGS := $(LDFLAGS) -lz -lrt -lcrypt -laio -ldl -lssl -lcrypto
 
-BENCH_SRCFILES = benchmarks/bdb_wrapper.cc \
-	benchmarks/bench.cc \
+BENCH_SRCFILES = benchmarks/bench.cc \
 	benchmarks/encstress.cc \
 	benchmarks/bid.cc \
 	benchmarks/queue.cc \
@@ -159,34 +155,17 @@ BENCH_SRCFILES = benchmarks/bdb_wrapper.cc \
 	benchmarks/sto/Transaction.cc \
 	benchmarks/sto/MassTrans.cc
 
-ifeq ($(MYSQL_S),1)
-BENCH_CXXFLAGS += -DMYSQL_SHARE_DIR=\"$(MYSQL_SHARE_DIR)\"
-BENCH_LDFLAGS := -L/usr/lib/mysql -lmysqld $(BENCH_LDFLAGS)
-BENCH_SRCFILES += benchmarks/mysql_wrapper.cc
-else
-BENCH_CXXFLAGS += -DNO_MYSQL
-endif
-
 BENCH_OBJFILES := $(patsubst %.cc, $(O)/%.o, $(BENCH_SRCFILES))
-
-NEWBENCH_SRCFILES = new-benchmarks/bench.cc \
-	new-benchmarks/tpcc.cc
-
-NEWBENCH_OBJFILES := $(patsubst %.cc, $(O)/%.o, $(NEWBENCH_SRCFILES))
 
 all: $(O)/test
 
 $(O)/benchmarks/%.o: benchmarks/%.cc $(O)/buildstamp $(O)/buildstamp.bench $(OBJDEP)
 	@mkdir -p $(@D)
-	$(CXX) $(BENCH_CXXFLAGS) -c $< -o $@
+	$(CXX) -Imasstree $(BENCH_CXXFLAGS) -c $< -o $@
 
-$(O)/benchmarks/masstree/%.o: benchmarks/masstree/%.cc $(O)/buildstamp $(O)/buildstamp.bench $(OBJDEP)
+$(O)/benchmarks/sto/%.o: benchmarks/sto/%.cc $(O)/buildstamp $(O)/buildstamp.bench $(OBJDEP)
 	@mkdir -p $(@D)
-	$(CXX) $(BENCH_CXXFLAGS) -c $< -o $@
-
-$(O)/new-benchmarks/%.o: new-benchmarks/%.cc $(O)/buildstamp $(O)/buildstamp.bench $(OBJDEP)
-	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) -Imasstree $(BENCH_CXXFLAGS) -c $< -o $@
 
 $(O)/%.o: %.cc $(O)/buildstamp $(OBJDEP)
 	@mkdir -p $(@D)
@@ -194,7 +173,7 @@ $(O)/%.o: %.cc $(O)/buildstamp $(OBJDEP)
 
 $(MASSTREE_OBJFILES) : $(O)/%.o: masstree/%.cc masstree/config.h
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -include masstree/config.h -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 third-party/lz4/liblz4.so:
 	make -C third-party/lz4 library
@@ -231,18 +210,6 @@ dbtest: $(O)/benchmarks/dbtest
 $(O)/benchmarks/dbtest: $(O)/benchmarks/dbtest.o $(OBJFILES) $(MASSTREE_OBJFILES) $(BENCH_OBJFILES) third-party/lz4/liblz4.so
 	$(CXX) -o $(O)/benchmarks/dbtest $^ $(BENCH_LDFLAGS) $(LZ4LDFLAGS)
 
-.PHONY: kvtest
-kvtest: $(O)/benchmarks/masstree/kvtest
-
-$(O)/benchmarks/masstree/kvtest: $(O)/benchmarks/masstree/kvtest.o $(OBJFILES) $(BENCH_OBJFILES)
-	$(CXX) -o $(O)/benchmarks/masstree/kvtest $^ $(BENCH_LDFLAGS)
-
-.PHONY: newdbtest
-newdbtest: $(O)/new-benchmarks/dbtest
-
-$(O)/new-benchmarks/dbtest: $(O)/new-benchmarks/dbtest.o $(OBJFILES) $(MASSTREE_OBJFILES) $(NEWBENCH_OBJFILES) third-party/lz4/liblz4.so
-	$(CXX) -o $(O)/new-benchmarks/dbtest $^ $(LDFLAGS) $(LZ4LDFLAGS)
-
 DEPFILES := $(wildcard $(O)/*.d $(O)/*/*.d $(O)/*/*/*.d masstree/_masstree_config.d)
 ifneq ($(DEPFILES),)
 -include $(DEPFILES)
@@ -256,10 +223,6 @@ UPDATE_MASSTREE := $(shell cd ./`git rev-parse --show-cdup` && cur=`git submodul
 
 ifneq ($(strip $(DEBUG_S).$(CHECK_INVARIANTS_S).$(EVENT_COUNTERS_S)),$(strip $(DEP_MAIN_CONFIG)))
 DEP_MAIN_CONFIG := $(shell mkdir -p $(O); echo >$(O)/buildstamp; echo "DEP_MAIN_CONFIG:=$(DEBUG_S).$(CHECK_INVARIANTS_S).$(EVENT_COUNTERS_S)" >$(O)/_main_config.d)
-endif
-
-ifneq ($(strip $(MYSQL_S)),$(strip $(DEP_BENCH_CONFIG)))
-DEP_BENCH_CONFIG := $(shell mkdir -p $(O); echo >$(O)/buildstamp.bench; echo "DEP_BENCH_CONFIG:=$(MYSQL_S)" >$(O)/_bench_config.d)
 endif
 
 ifneq ($(strip $(MASSTREE_CONFIG)),$(strip $(DEP_MASSTREE_CONFIG)))

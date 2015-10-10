@@ -14,11 +14,9 @@ struct txn_btree_ {
     {
       return s;
     }
-#if NDB_MASSTREE
     inline ALWAYS_INLINE lcdf::Str operator()(lcdf::Str s) {
       return s;
     }
-#endif
   };
 
   class key_writer {

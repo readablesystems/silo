@@ -15,4 +15,4 @@ $ sudo apt-get install libgoogle-perftools-dev
 
 For benchmarks:
 
-$ sudo apt-get install libdb5.3++-dev libmysqld-dev libaio-dev
+$ sudo apt-get install libaio-dev

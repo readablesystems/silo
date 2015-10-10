@@ -17,9 +17,7 @@
 
 #include "scopedperf.hh"
 
-#if defined(NDB_MASSTREE)
 #define HAVE_REVERSE_RANGE_SCANS
-#endif
 
 using namespace std;
 using namespace util;

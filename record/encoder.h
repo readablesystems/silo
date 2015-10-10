@@ -6,10 +6,7 @@
 #include "serializer.h"
 #include "../util.h"
 #include "../ndb_type_traits.h"
-
-#if NDB_MASSTREE
 #include "../masstree/str.hh"
-#endif
 
 // the C preprocessor is absolutely wonderful...
 
@@ -252,16 +249,12 @@ Size(const T &t)
     return sizeof(*obj); \
   }
 
-#if NDB_MASSTREE
 #define DO_STRUCT_MASSTREE(name) \
   inline ALWAYS_INLINE const struct name * \
   read(lcdf::Str buf, struct name *obj) const       \
   { \
     return read((const uint8_t *) buf.data(), obj); \
   }
-#else
-#define DO_STRUCT_MASSTREE(name)
-#endif
 
 #define DO_STRUCT_COMMON(name) \
   inline std::string & \
