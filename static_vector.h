@@ -4,13 +4,13 @@
 #include <algorithm>
 #include <type_traits>
 #include "macros.h"
-#include "ndb_type_traits.h"
+#include "masstree/compiler.hh"
 
 template <typename T, size_t StaticSize = SMALL_SIZE_VEC>
 class static_vector {
 
   static const bool is_trivially_destructible =
-    private_::is_trivially_destructible<T>::value;
+    mass::is_trivially_destructible<T>::value;
 
   // std::is_trivially_copyable not supported in g++-4.7
   static const bool is_trivially_copyable = std::is_scalar<T>::value;

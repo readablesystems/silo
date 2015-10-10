@@ -24,7 +24,7 @@ private:
   typedef std::pair<key_type, mapped_type> bucket_value_type;
 
   static const bool is_trivially_destructible =
-    private_::is_trivially_destructible<bucket_value_type>::value;
+    mass::is_trivially_destructible<bucket_value_type>::value;
 
   static const size_t TableSize = private_::TableSize(StaticSize);
   static_assert(StaticSize >= 1, "XXX");

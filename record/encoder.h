@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include "serializer.h"
 #include "../util.h"
-#include "../ndb_type_traits.h"
 #include "../masstree/str.hh"
+#include "../masstree/compiler.hh"
 
 // the C preprocessor is absolutely wonderful...
 
@@ -72,10 +72,10 @@ Size(const T &t)
     return false;
 
 #define STRUCT_PARAM_FIRST_X(tpe, name) \
-  typename private_::typeutil< tpe >::func_param_type name
+  typename mass::fast_argument< tpe >::type name
 
 #define STRUCT_PARAM_REST_X(tpe, name) \
-  , typename private_::typeutil< tpe >::func_param_type name
+  , typename mass::fast_argument< tpe >::type name
 
 #define STRUCT_INITLIST_FIRST_X(tpe, name) \
   name(name)
@@ -425,12 +425,6 @@ Size(const T &t)
     o << "{" << valuefields(STRUCT_PRINTER_FIRST_X, STRUCT_PRINTER_REST_X) << "}"; \
     return o; \
   } \
-  namespace private_ { \
-  template <> \
-  struct is_trivially_destructible< name::key > { \
-    static const bool value = true; \
-  }; \
-  } \
   template <> \
   struct encoder< name::key > { \
   inline void \
@@ -463,12 +457,6 @@ Size(const T &t)
   DO_STRUCT_COMMON(name::key) \
   DO_STRUCT_ENCODE_REST(name::key) \
   }; \
-  namespace private_ { \
-  template <> \
-  struct is_trivially_destructible< name::value > { \
-    static const bool value = true; \
-  }; \
-  } \
   template <> \
   struct encoder< name::value > { \
   inline void \
@@ -614,12 +602,6 @@ Size(const T &t)
   { \
     o << "{" << valuefields(STRUCT_PRINTER_FIRST_X, STRUCT_PRINTER_REST_X) << "}"; \
     return o; \
-  } \
-  namespace private_ { \
-  template <> \
-  struct is_trivially_destructible< name::value > { \
-    static const bool value = true; \
-  }; \
   } \
   template <> \
   struct encoder< name::value > { \

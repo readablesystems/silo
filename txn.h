@@ -35,7 +35,6 @@
 #include "tuple.h"
 #include "scopedperf.hh"
 #include "marked_ptr.h"
-#include "ndb_type_traits.h"
 
 // forward decl
 template <template <typename> class Transaction, typename P>
@@ -347,32 +346,15 @@ protected:
   const uint64_t flags;
 };
 
-// type specializations
-namespace private_ {
-  template <>
-  struct is_trivially_destructible<transaction_base::read_record_t> {
-    static const bool value = true;
-  };
-
-  template <>
-  struct is_trivially_destructible<transaction_base::write_record_t> {
-    static const bool value = true;
-  };
-
-  template <>
-  struct is_trivially_destructible<transaction_base::absent_record_t> {
-    static const bool value = true;
-  };
-
-  template <>
-  struct is_trivially_destructible<transaction_base::dbtuple_write_info> {
-    static const bool value = true;
-  };
-}
 
 inline ALWAYS_INLINE std::ostream &
 operator<<(std::ostream &o, const transaction_base::read_record_t &r)
 {
+  static_assert(mass::is_trivially_destructible<transaction_base::read_record_t>::value, "checking is_trivially_destructible");
+  static_assert(mass::is_trivially_destructible<transaction_base::write_record_t>::value, "checking is_trivially_destructible");
+  static_assert(mass::is_trivially_destructible<transaction_base::absent_record_t>::value, "checking is_trivially_destructible");
+  static_assert(mass::is_trivially_destructible<transaction_base::dbtuple_write_info>::value, "checking is_trivially_destructible");
+
   //o << "[tuple=" << util::hexify(r.get_tuple())
   o << "[tuple=" << *r.get_tuple()
     << ", tid_read=" << g_proto_version_str(r.get_tid())

@@ -422,10 +422,10 @@ private:
   IsSupportable()
   {
     return Traits::stable_input_memory ||
-      (private_::is_trivially_copyable<key_type>::value &&
-       private_::is_trivially_destructible<key_type>::value &&
-       private_::is_trivially_copyable<value_type>::value &&
-       private_::is_trivially_destructible<value_type>::value);
+      (mass::is_trivially_copyable<key_type>::value &&
+       mass::is_trivially_destructible<key_type>::value &&
+       mass::is_trivially_copyable<value_type>::value &&
+       mass::is_trivially_destructible<value_type>::value);
   }
 
 public:
