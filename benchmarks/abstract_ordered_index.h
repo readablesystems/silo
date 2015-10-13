@@ -9,6 +9,7 @@
 
 #include "../macros.h"
 #include "../str_arena.h"
+#include "tpcc_keys.h"
 
 /**
  * The underlying index manages memory for keys/values, but
@@ -33,6 +34,14 @@ public:
   virtual bool get(
       void *txn,
       int32_t key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
+  }
+  
+  virtual bool get(
+      void *txn,
+      customer_key key,
       std::string &value,
       size_t max_bytes_read = std::string::npos) {
       return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
@@ -119,6 +128,24 @@ public:
   }
 
 
+  virtual const char *
+  put(void *txn,
+         customer_key key,
+         const std::string &value)
+  {
+      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+  virtual const char *
+  put(void *txn,
+         customer_key key,
+         std::string &&value)
+  {
+      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+
+
   /**
    * Insert a key of length keylen.
    *
@@ -159,6 +186,23 @@ public:
       return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
   }
 
+  virtual const char *
+  insert(void *txn,
+         customer_key key,
+         const std::string &value)
+  {      
+      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+  
+  virtual const char *
+  insert(void *txn,
+         customer_key key,
+         std::string &&value)
+  {      
+      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+  }
+
+
   /**
    * Default implementation calls put() with NULL (zero-length) value
    */
@@ -175,6 +219,14 @@ public:
   {
     put(txn, key, "");
   }
+
+  virtual void remove(
+      void *txn,
+      customer_key key)
+  {   
+    put(txn, key, "");
+  } 
+
 
 
   /**
