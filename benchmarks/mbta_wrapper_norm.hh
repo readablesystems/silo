@@ -5,7 +5,7 @@
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
 #include "sto/Hashtable.hh"
-#include <unordered_map> 
+#include "sto/simple_str.hh"
 //#include "tpcc.h"
 
 #define STD_OP(f) \
@@ -262,7 +262,7 @@ public:
     ht_get++;
 #endif
     STD_OP({
-        bool ret = ht.read(key, value);
+        bool ret = ht.transGet(key, value);
         return ret;
           });
 
@@ -286,7 +286,7 @@ public:
     ht_put++;
 #endif
     STD_OP({
-        ht.put(key, value);
+        ht.transPut<false>(key, value);
         return 0;
           });
   }
@@ -307,7 +307,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-        ht.transInsert(key, value); return 0;});
+        ht.transPut<false>(key, value); return 0;});
   }
 
 
@@ -350,7 +350,7 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<int32_t, std::string, READ_MY_WRITES/*opacity*/, 1000000> ht_type;
+  typedef Hashtable<int32_t, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
   //typedef std::unordered_map<K, std::string> ht_type;
 private:
   friend class mbta_wrapper;
@@ -387,9 +387,9 @@ public:
     }
 
 #endif
+#if OP_LOGGING
     std::cout << "Find traversal: " << ct << std::endl;
     std::cout << "Max traversal: " << max_ct << std::endl;
-#if OP_LOGGING
     printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
 #endif 
     //txn_epoch_sync<Transaction>::finish();
