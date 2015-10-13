@@ -65,7 +65,7 @@ public:
 
   const char *put(void* txn,
                   lcdf::Str key,
-                  const std::string &value)
+                  std::string&& value)
   {
 #if OP_LOGGING
     mt_put++;
@@ -73,16 +73,16 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut<false>(key, value);
+        mbta.transPut<false>(key, std::move(value));
         return 0;
           });
   }
-  
+
   const char *insert(void *txn,
                      lcdf::Str key,
-                     const std::string &value)
+                     std::string&& value)
   {
-    STD_OP(mbta.transInsert<false>(key, value); return 0;)
+    STD_OP(mbta.transInsert<false>(key, std::move(value)); return 0;)
   }
 
   void remove(void *txn, const std::string &key) {
@@ -168,7 +168,7 @@ public:
   const char *put(
       void* txn,
       lcdf::Str key,
-      const std::string &value)
+      std::string&& value)
   {
 #if OP_LOGGING
     ht_put++;
@@ -176,7 +176,7 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-	ht.put(key, value);
+	ht.put(key, std::move(value));
         //ht[key] = value;
         return 0;
           });
@@ -184,13 +184,13 @@ public:
 
   const char *insert(void *txn,
                      lcdf::Str key,
-                     const std::string &value)
+                     std::string&& value)
   {
 #if OP_LOGGING
     ht_insert++;
 #endif
     STD_OP({
-	ht.transInsert(key, value); return 0;
+	ht.transInsert(key, std::move(value)); return 0;
 	});
   }
 
@@ -272,7 +272,7 @@ public:
   const char *put(
       void* txn,
       lcdf::Str key,
-      const std::string &value)
+      std::string&& value)
   {
     return 0;
   }
@@ -280,34 +280,33 @@ public:
   const char *put(
       void* txn,
       int32_t key,
-      const std::string &value)
+      std::string&& value)
   {
 #if OP_LOGGING
     ht_put++;
 #endif
     STD_OP({
-        ht.put(key, value);
+        ht.put(key, std::move(value));
         return 0;
           });
   }
 
-  
   const char *insert(void *txn,
                      lcdf::Str key,
-                     const std::string &value)
+                     std::string&& value)
   {
     return 0;
   }
 
   const char *insert(void *txn,
                      int32_t key,
-                     const std::string &value)
+                     std::string&& value)
   {
 #if OP_LOGGING
     ht_insert++;
 #endif
     STD_OP({
-        ht.transInsert(key, value); return 0;});
+        ht.transInsert(key, std::move(value)); return 0;});
   }
 
 
@@ -318,10 +317,10 @@ public:
   void remove(void *txn, int32_t key) {
 #if OP_LOGGING
     ht_del++;
-#endif    
+#endif
     STD_OP({
         ht.transDelete(key);});
-  }     
+  }
 
   void scan(void *txn,
             lcdf::Str start_key,
@@ -388,7 +387,7 @@ public:
 
 #endif
     std::cout << "Find traversal: " << ct << std::endl;
-    std::cout << "Max traversal: " << max_ct << std::endl;
+    //std::cout << "Max traversal: " << max_ct << std::endl;
 #if OP_LOGGING
     printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
 #endif 

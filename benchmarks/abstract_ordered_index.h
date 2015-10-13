@@ -13,7 +13,7 @@
 /**
  * The underlying index manages memory for keys/values, but
  * may choose to expose the underlying memory to callers
- * (see put() and inesrt()).
+ * (see put() and insert()).
  */
 class abstract_ordered_index {
 public:
@@ -92,30 +92,14 @@ public:
   virtual const char *
   put(void *txn,
       lcdf::Str key,
-      const std::string &value) = 0;
+      std::string&& value) = 0;
 
   virtual const char *
   put(void *txn,
-      lcdf::Str key,
-      std::string &&value)
+      int32_t key,
+      std::string&& value)
   {
-      return put(txn, key, static_cast<const std::string &>(value));
-  }
-
-  virtual const char *
-  put(void *txn,
-         int32_t key,
-         const std::string &value)
-  {
-      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
-  }
-
-  virtual const char *
-  put(void *txn,
-         int32_t key,
-         std::string &&value)
-  {
-      return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+    return put(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), std::move(value));
   }
 
 
@@ -130,33 +114,17 @@ public:
   virtual const char *
   insert(void *txn,
          lcdf::Str key,
-         const std::string &value)
+         std::string&& value)
   {
-    return put(txn, key, value);
+    return put(txn, key, std::move(value));
   }
 
   virtual const char *
   insert(void *txn,
-         lcdf::Str key,
-         std::string &&value)
+         uint32_t key,
+         std::string&& value)
   {
-      return insert(txn, key, static_cast<const std::string &>(value));
-  }
-
-  virtual const char *
-  insert(void *txn,
-         int32_t key,
-         const std::string &value)
-  {
-      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
-  }
-
-  virtual const char *
-  insert(void *txn,
-         int32_t key,
-         std::string &&value)
-  {
-      return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value);
+    return insert(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), std::move(value));
   }
 
   /**

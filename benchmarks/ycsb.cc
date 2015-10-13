@@ -77,8 +77,7 @@ public:
     scoped_str_arena s_arena(arena);
     try {
       auto s = u64_varkey(r.next() % nkeys).str(str());
-      auto s2 = str().assign(YCSBRecordSize, 'b');
-      tbl->put(txn, s, s2);
+      tbl->put(txn, s, std::string(YCSBRecordSize, 'b'));
       measure_txn_counters(txn, "txn_write");
       if (likely(db->commit_txn(txn)))
         return txn_result(true, 0);
@@ -103,7 +102,7 @@ public:
       const uint64_t key = r.next() % nkeys;
       ALWAYS_ASSERT(tbl->get(txn, u64_varkey(key).str(obj_key0), obj_v));
       computation_n += obj_v.size();
-      tbl->put(txn, obj_key0, str().assign(YCSBRecordSize, 'c'));
+      tbl->put(txn, obj_key0, std::string(YCSBRecordSize, 'c'));
       measure_txn_counters(txn, "txn_rmw");
       if (likely(db->commit_txn(txn)))
         return txn_result(true, 0);
@@ -250,9 +249,7 @@ ycsb_load_keyrange(
         keyend : keystart + ((batchid + 1) * batchsize);
       for (size_t i = batchid * batchsize + keystart; i < rend; i++) {
         ALWAYS_ASSERT(i >= keystart && i < keyend);
-        const string k = u64_varkey(i).str();
-        const string v(YCSBRecordSize, 'a');
-        tbl->insert(txn, k, v);
+        tbl->insert(txn, u64_varkey(i).str(), std::string(YCSBRecordSize, 'a'));
       }
       if (db->commit_txn(txn))
         batchid++;

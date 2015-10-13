@@ -29,11 +29,11 @@ Encode(uint8_t *buf, const T &t)
 }
 
 template <typename T>
-static inline std::string &
-Encode(std::string &buf, const T &t)
+static inline std::string&&
+Encode(std::string& buf, const T &t)
 {
   const encoder<T> enc;
-  return enc.write(buf, &t);
+  return std::move(enc.write(buf, &t));
 }
 
 template <typename T>
