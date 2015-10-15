@@ -15,6 +15,7 @@
 #include "../counter.h"
 #include "../scopedperf.hh"
 #include "../allocator.h"
+#include "sto/Transaction.hh"
 
 #ifdef USE_JEMALLOC
 //cannot include this header b/c conflicts with malloc.h
@@ -228,6 +229,7 @@ bench_runner::run()
 
   const vector<bench_worker *> workers = make_workers();
   ALWAYS_ASSERT(!workers.empty());
+  Transaction::clear_stats();
   for (vector<bench_worker *>::const_iterator it = workers.begin();
        it != workers.end(); ++it)
     (*it)->start();

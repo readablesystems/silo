@@ -1,26 +1,11 @@
+#pragma once 
 #ifndef _NDB_BENCH_TPCC_H_
 #define _NDB_BENCH_TPCC_H_
 
 #include "../record/encoder.h"
 #include "../record/inline_str.h"
 #include "../macros.h"
-
-struct __attribute__((packed)) customer_key {
-    inline customer_key() {
-    }
-    inline customer_key(int32_t w_id, int32_t d_id, int32_t c_id)
-        : c_w_id(w_id), c_d_id(d_id), c_id(c_id) {
-    }
-    inline bool operator==(const customer_key& other) const {
-        return c_w_id == other.c_w_id && c_d_id == other.c_d_id && c_id == other.c_id;
-    }
-    inline bool operator!=(const customer_key& other) const {
-        return !(*this == other);
-    }
-    int32_t c_w_id;
-    int32_t c_d_id;
-    int32_t c_id;
-};
+#include "tpcc_keys.h"
 
 inline lcdf::Str EncodeK(const customer_key& k) {
     static_assert(sizeof(k) == 12, "bad customer_key size");
@@ -61,22 +46,6 @@ DO_STRUCT2(customer, customer_key, CUSTOMER_VALUE_FIELDS)
 DO_STRUCT(customer_name_idx, CUSTOMER_NAME_IDX_KEY_FIELDS, CUSTOMER_NAME_IDX_VALUE_FIELDS)
 
 
-struct __attribute__((packed)) district_key {
-    inline district_key() {
-    }
-    inline district_key(int32_t w_id, int32_t d_id)
-        : d_w_id(w_id), d_id(d_id) {
-    }
-    inline bool operator==(const district_key& other) const {
-        return d_w_id == other.d_w_id && d_id == other.d_id;
-    }
-    inline bool operator!=(const district_key& other) const {
-        return !(*this == other);
-    }
-    int32_t d_w_id;
-    int32_t d_id;
-};
-
 inline lcdf::Str EncodeK(const district_key& k) {
     static_assert(sizeof(k) == 8, "bad sizeof(district_key)");
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
@@ -97,34 +66,18 @@ inline lcdf::Str EncodeK(std::string&, const district_key& k) {
   y(inline_str_fixed<9>,d_zip)
 DO_STRUCT2(district, district_key, DISTRICT_VALUE_FIELDS)
 
+inline lcdf::Str EncodeK(const history_key& k) {
+    static_assert(sizeof(k) == 24, "bad sizeof(history_key)");
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
+inline lcdf::Str EncodeK(std::string&, const history_key& k) {
+    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+}
 
-#define HISTORY_KEY_FIELDS(x, y) \
-  x(int32_t,h_c_id) \
-  y(int32_t,h_c_d_id) \
-  y(int32_t,h_c_w_id) \
-  y(int32_t,h_d_id) \
-  y(int32_t,h_w_id) \
-  y(uint32_t,h_date)
 #define HISTORY_VALUE_FIELDS(x, y) \
   x(float,h_amount) \
   y(inline_str_8<24>,h_data)
-DO_STRUCT(history, HISTORY_KEY_FIELDS, HISTORY_VALUE_FIELDS)
-
-
-struct __attribute__((packed)) item_key {
-    inline item_key() {
-    }
-    inline item_key(int32_t i_id)
-        : i_id(i_id) {
-    }
-    inline bool operator==(const item_key& other) const {
-        return i_id == other.i_id;
-    }
-    inline bool operator!=(const item_key& other) const {
-        return !(*this == other);
-    }
-    int32_t i_id;
-};
+DO_STRUCT2(history, history_key, HISTORY_VALUE_FIELDS)
 
 inline uint32_t EncodeK(const item_key& k) {
     return k.i_id;
@@ -151,28 +104,11 @@ DO_STRUCT2(item, item_key, ITEM_VALUE_FIELDS)
 DO_STRUCT(new_order, NEW_ORDER_KEY_FIELDS, NEW_ORDER_VALUE_FIELDS)
 
 
-struct __attribute__((packed)) oorder_key {
-    inline oorder_key() {
-    }
-    inline oorder_key(int32_t w_id, int32_t d_id, int32_t o_id)
-        : o_w_id(w_id), o_d_id(d_id), o_id(o_id) {
-    }
-    inline bool operator==(const oorder_key& other) const {
-        return o_w_id == other.o_w_id && o_d_id == other.o_d_id && o_id == other.o_id;
-    }
-    inline bool operator!=(const oorder_key& other) const {
-        return !(*this == other);
-    }
-    int32_t o_w_id;
-    int32_t o_d_id;
-    int32_t o_id;
-};
-
-lcdf::Str EncodeK(const oorder_key& k) {
+inline lcdf::Str EncodeK(const oorder_key& k) {
     static_assert(sizeof(k) == 12, "bad sizeof(oorder_key)");
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
-lcdf::Str EncodeK(std::string&, const oorder_key& k) {
+inline lcdf::Str EncodeK(std::string&, const oorder_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 
@@ -207,23 +143,6 @@ DO_STRUCT(oorder_c_id_idx, OORDER_C_ID_IDX_KEY_FIELDS, OORDER_C_ID_IDX_VALUE_FIE
   y(int8_t,ol_quantity)
 DO_STRUCT(order_line, ORDER_LINE_KEY_FIELDS, ORDER_LINE_VALUE_FIELDS)
 
-
-struct __attribute__((packed)) stock_key {
-    inline stock_key() {
-    }
-    inline stock_key(int32_t w_id, int32_t i_id)
-        : s_w_id(w_id), s_i_id(i_id) {
-    }
-    inline bool operator==(const stock_key& other) const {
-        return s_w_id == other.s_w_id && s_i_id == other.s_i_id;
-    }
-    inline bool operator!=(const stock_key& other) const {
-        return !(*this == other);
-    }
-    int32_t s_w_id;
-    int32_t s_i_id;
-};
-
 inline lcdf::Str EncodeK(const stock_key& k) {
     static_assert(sizeof(k) == 8, "bad sizeof(stock_key)");
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
@@ -255,26 +174,11 @@ DO_STRUCT2(stock, stock_key, STOCK_VALUE_FIELDS)
 DO_STRUCT2(stock_data, stock_key, STOCK_DATA_VALUE_FIELDS)
 
 
-struct __attribute__((packed)) warehouse_key {
-    inline warehouse_key() {
-    }
-    inline warehouse_key(int32_t w_id)
-        : w_id(w_id) {
-    }
-    inline bool operator==(const warehouse_key& other) const {
-        return w_id == other.w_id;
-    }
-    inline bool operator!=(const warehouse_key& other) const {
-        return !(*this == other);
-    }
-    int32_t w_id;
-};
-
-lcdf::Str EncodeK(const warehouse_key& k) {
+inline lcdf::Str EncodeK(const warehouse_key& k) {
     static_assert(sizeof(k) == 4, "bad sizeof(warehouse_key)");
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
-lcdf::Str EncodeK(std::string&, const warehouse_key& k) {
+inline lcdf::Str EncodeK(std::string&, const warehouse_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 

@@ -31,6 +31,42 @@ namespace std
      typedef std::size_t result_type;
 
      result_type operator()(argument_type const& s) const {
+       //return XXH32(&s, sizeof(argument_type), 11);
+       return ((size_t)s.c_id) | (((size_t)s.c_d_id & ((1 << 16) - 1)) << 32) | (((size_t)s.c_w_id & ((1 << 16) -1)) << 48);
+     }
+  };
+}
+
+struct __attribute__((packed)) history_key {
+    inline history_key() {
+    }
+    inline history_key(int32_t h_c_id, int32_t h_c_d_id, int32_t h_c_w_id,
+			int32_t h_d_id, int32_t h_w_id, uint32_t h_date)
+        : h_c_id(h_c_id), h_c_d_id(h_c_d_id), h_c_w_id(h_c_w_id), h_d_id(h_d_id), h_w_id(h_w_id), h_date(h_date) {
+    }
+    inline bool operator==(const history_key& other) const {
+        return h_c_id == other.h_c_id && h_c_d_id == other.h_c_d_id && h_c_w_id == other.h_c_w_id && h_d_id == other.h_d_id && h_w_id == other.h_w_id && h_date == other.h_date;
+    }
+    inline bool operator!=(const history_key& other) const {
+        return !(*this == other);
+    }
+    int32_t h_c_id;
+    int32_t h_c_d_id;
+    int32_t h_c_w_id;
+    int32_t h_d_id;
+    int32_t h_w_id;
+    uint32_t h_date;
+};
+
+namespace std
+{
+  template<>
+  struct hash<history_key>
+  {
+     typedef history_key argument_type;
+     typedef std::size_t result_type;
+
+     result_type operator()(argument_type const& s) const {
        return XXH32(&s, sizeof(argument_type), 11);
      }
   };
@@ -52,6 +88,21 @@ struct __attribute__((packed)) district_key {
     int32_t d_w_id;
     int32_t d_id;
 };
+
+namespace std
+{
+  template<>
+  struct hash<district_key>
+  {
+     typedef district_key argument_type;
+     typedef std::size_t result_type;
+
+     result_type operator()(argument_type const& s) const {
+       //return XXH32(&s, sizeof(argument_type), 11);
+       return ((size_t)s.d_id) | ((size_t)s.d_w_id  << 32) ;
+     }
+  };
+}
 
 
 struct __attribute__((packed)) item_key {
@@ -86,6 +137,21 @@ struct __attribute__((packed)) oorder_key {
     int32_t o_id;
 };
 
+namespace std
+{
+  template<>
+  struct hash<oorder_key>
+  {
+     typedef oorder_key argument_type;
+     typedef std::size_t result_type;
+
+     result_type operator()(argument_type const& s) const {
+       //return XXH32(&s, sizeof(argument_type), 11);
+       return ((size_t)s.o_id) | (((size_t)s.o_d_id & ((1 << 16) - 1)) << 32) | (((size_t)s.o_w_id & ((1 << 16) -1)) << 48);
+     }
+  };
+}
+
 struct __attribute__((packed)) stock_key {
     inline stock_key() {
     }
@@ -101,6 +167,22 @@ struct __attribute__((packed)) stock_key {
     int32_t s_w_id;
     int32_t s_i_id;
 };
+
+namespace std
+{
+  template<>
+  struct hash<stock_key>
+  {
+     typedef stock_key argument_type;
+     typedef std::size_t result_type;
+
+     result_type operator()(argument_type const& s) const {
+       //return XXH32(&s, sizeof(argument_type), 11);
+       return ((size_t)s.s_i_id) | ((size_t)s.s_w_id  << 32) ;
+     }
+  };
+}
+
 
 struct __attribute__((packed)) warehouse_key {
     inline warehouse_key() {

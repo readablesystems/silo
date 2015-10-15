@@ -193,6 +193,8 @@ main(int argc, char **argv)
 
   if (bench_type == "ycsb")
     test_fn = ycsb_do_test;
+  else if (bench_type == "tpccSimple")
+    test_fn = tpcc_simple_do_test;
   else if (bench_type == "tpcc")
     test_fn = tpcc_do_test;
   else if (bench_type == "queue")

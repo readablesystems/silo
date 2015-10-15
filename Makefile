@@ -22,6 +22,7 @@ MODE ?= perf
 
 STO_RMW ?= 0
 
+GPROF ?= 0
 ###############
 
 DEBUG_S=$(strip $(DEBUG))
@@ -30,6 +31,7 @@ EVENT_COUNTERS_S=$(strip $(EVENT_COUNTERS))
 USE_MALLOC_MODE_S=$(strip $(USE_MALLOC_MODE))
 MODE_S=$(strip $(MODE))
 STO_RMW_S=$(strip $(STO_RMW))
+GPROF_S=$(strip $(GPROF))
 MASSTREE_CONFIG:=--enable-max-key-len=1024
 
 ifeq ($(DEBUG_S),1)
@@ -74,8 +76,12 @@ else
 	$(error invalid mode)
 endif
 
-CXXFLAGS := -g -Wall -std=c++0x
+CXXFLAGS := -g -Wall -std=c++0x 
 CXXFLAGS += -MD -MP -Ithird-party/lz4 -DCONFIG_H=\"$(CONFIG_H)\"
+ifeq ($(GPROF_S),1)
+	CXXFLAGS += -pg -static-libstdc++ -static-libgcc
+endif
+
 ifeq ($(DEBUG_S),1)
         CXXFLAGS += -fno-omit-frame-pointer -DDEBUG
 else
@@ -94,6 +100,9 @@ CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
 
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
+ifeq ($(GPROF_S),1)
+        LDFLAGS += -pg -static-libstdc++ -static-libgcc 
+endif
 
 LZ4LDFLAGS := -Lthird-party/lz4 -llz4 -Wl,-rpath,$(TOP)/third-party/lz4
 
@@ -151,6 +160,7 @@ BENCH_SRCFILES = benchmarks/bench.cc \
 	benchmarks/bid.cc \
 	benchmarks/queue.cc \
 	benchmarks/tpcc.cc \
+	benchmarks/tpcc_simple.cc\
 	benchmarks/ycsb.cc \
 	benchmarks/sto/Transaction.cc \
 	benchmarks/sto/MassTrans.cc

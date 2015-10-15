@@ -4,6 +4,9 @@
 #include "abstract_ordered_index.h"
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
+
+#define OP_LOGGING 0
+
 #include "sto/Hashtable.hh"
 #include "sto/simple_str.hh"
 //#include "tpcc.h"
@@ -15,7 +18,6 @@
     throw abstract_db::abstract_abort_exception(); \
   }
 
-#define OP_LOGGING 0
 
 #if OP_LOGGING
 std::atomic<long> mt_get(0);
@@ -451,8 +453,311 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<customer_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+  typedef Hashtable<customer_key, std::string, READ_MY_WRITES/*opacity*/, 100000, simple_str> ht_type;
   //typedef std::unordered_map<K, std::string> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_history_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_history_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transPut<false>(k, value);
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transPut<false>(k, value); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            lcdf::Str start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             lcdf::Str start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+  typedef Hashtable<history_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_oorder_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_oorder_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transPut<false>(k, value);
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transPut<false>(k, value); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            lcdf::Str start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             lcdf::Str start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+  typedef Hashtable<oorder_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_stock_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_stock_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transPut<false>(k, value);
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transPut<false>(k, value); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            lcdf::Str start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             lcdf::Str start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+  typedef Hashtable<stock_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -484,7 +789,7 @@ public:
    {
         using thd = threadinfo_t;
         thd tc = Transaction::tinfo_combined();
-        printf("total_n: %llu, total_r: %llu, total_w: %llu, total_searched: %llu, total_aborts: %llu (%llu aborts at commit time)\n", tc.p(txp_total_n), tc.p(txp_total_r), tc.p(txp_total_w), tc.p(txp_total_searched), tc.p(txp_total_aborts), tc.p(txp_commit_time_aborts));
+        printf("total_n: %llu, total_r: %llu, total_w: %llu, total_searched: %llu, total_aborts: %llu (%llu aborts at commit time), rdata_size: %llu, wdata_size: %llu\n", tc.p(txp_total_n), tc.p(txp_total_r), tc.p(txp_total_w), tc.p(txp_total_searched), tc.p(txp_total_aborts), tc.p(txp_commit_time_aborts), tc.p(txp_max_rdata_size), tc.p(txp_max_wdata_size));
     }
 
 #endif
@@ -551,6 +856,12 @@ public:
     if (use_hashtable) {
       if (name.find("customer") == 0) 
         return new ht_ordered_index_customer_key(name, this);
+      if (name.find("history") == 0)
+	return new ht_ordered_index_history_key(name, this);
+      if (name.find("oorder") == 0)
+	return new ht_ordered_index_oorder_key(name, this);
+      if (name.find("stock") == 0)
+        return new ht_ordered_index_stock_key(name, this);
       return new ht_ordered_index_int(name, this);
     }
     auto ret = new mbta_ordered_index(name, this);
