@@ -44,6 +44,7 @@ int slow_exit = 0;
 int retry_aborted_transaction = 0;
 int no_reset_counters = 0;
 int backoff_aborted_transaction = 0;
+int use_hashtable = 0;
 
 template <typename T>
 static void
@@ -374,6 +375,11 @@ bench_runner::run()
        << agg_abort_rate << " "
        << agg_txn_counts["NewOrder"] << endl;
   cout.flush();
+
+  for (map<string, abstract_ordered_index *>::iterator it = open_tables.begin();
+       it != open_tables.end(); ++it) {
+    //it->second->print_stats();
+  }
 
   if (!slow_exit)
     return;

@@ -1988,7 +1988,7 @@ private:
   static bool
   UseHashtable(const char *name)
   {
-    //return false;
+    if (!use_hashtable) return false;
     return strcmp("customer", name) == 0 || 
 	   //strcmp("district", name) == 0 ||
 	   strcmp("history", name) == 0 ||
@@ -1996,7 +1996,7 @@ private:
            strcmp("oorder", name) == 0 ||
 	   strcmp("stock", name) == 0 ||
 	   //strcmp("stock_data", name) == 0 ||
-	   strcmp("warehouse", name) == 0 ||
+	   //strcmp("warehouse", name) == 0 ||
 	0;
   }
 

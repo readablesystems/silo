@@ -121,7 +121,7 @@ public:
     throw 2;
   }
 
-  typedef MassTrans<std::string, versioned_str_struct, READ_MY_WRITES/*opacity*/> mbta_type;
+  typedef MassTrans<std::string, versioned_str_struct, false/*opacity*/> mbta_type;
 private:
   friend class mbta_wrapper;
   mbta_type mbta;
@@ -214,7 +214,7 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<std::string, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+  typedef Hashtable<std::string, std::string, false/*opacity*/, 999983, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -333,7 +333,12 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<int32_t, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+  void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<int32_t, std::string, false/*opacity*/, 227497, simple_str> ht_type;
   //typedef std::unordered_map<K, std::string> ht_type;
 private:
   friend class mbta_wrapper;
@@ -452,8 +457,13 @@ public:
   clear() {
     throw 2;
   }
+  
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
 
-  typedef Hashtable<customer_key, std::string, READ_MY_WRITES/*opacity*/, 100000, simple_str> ht_type;
+  typedef Hashtable<customer_key, std::string, false/*opacity*/, 999983, simple_str> ht_type;
   //typedef std::unordered_map<K, std::string> ht_type;
 private:
   friend class mbta_wrapper;
@@ -555,7 +565,12 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<history_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<history_key, std::string, false/*opacity*/, 20000003, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -656,7 +671,13 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<oorder_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+
+  typedef Hashtable<oorder_key, std::string, false/*opacity*/, 20000003, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -757,7 +778,12 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<stock_key, std::string, READ_MY_WRITES/*opacity*/, 1000000, simple_str> ht_type;
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<stock_key, std::string, false/*opacity*/, 3000017, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -767,7 +793,6 @@ private:
   mbta_wrapper *db;
 
 };
-
 
 
 class mbta_wrapper : public abstract_db {
@@ -794,8 +819,6 @@ public:
 
 #endif
 #if OP_LOGGING
-    std::cout << "Find traversal: " << ct << std::endl;
-    std::cout << "Max traversal: " << max_ct << std::endl;
     printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
 #endif 
     //txn_epoch_sync<Transaction>::finish();

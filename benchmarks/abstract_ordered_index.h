@@ -238,6 +238,8 @@ public:
    * Not thread safe for now
    */
   virtual std::map<std::string, uint64_t> clear() = 0;
+
+  virtual void print_stats() { }
 };
 
 #endif /* _ABSTRACT_ORDERED_INDEX_H_ */

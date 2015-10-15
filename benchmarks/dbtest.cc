@@ -101,6 +101,7 @@ main(int argc, char **argv)
       {"disable-snapshots"          , no_argument       , &disable_snapshots         , 1}   ,
       {"stats-server-sockfile"      , required_argument , 0                          , 'x'} ,
       {"no-reset-counters"          , no_argument       , &no_reset_counters         , 1}   ,
+      {"use-hashtable"		    , no_argument	, &use_hashtable	     , 1}   ,
       {0, 0, 0, 0}
     };
     int option_index = 0;
