@@ -73,7 +73,7 @@ public:
     STD_OP(mbta.transInsert<false>(key, value); return 0;)
   }
 
-  void remove(void *txn, const std::string &key) {
+  void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
     mt_del++;
 #endif

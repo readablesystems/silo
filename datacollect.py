@@ -32,6 +32,7 @@ NTHREADS = 24
 MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
 MANY_THREADED= MANY_THREADS(NTHREADS)
 MBTA="-dmbta "
+HT="-dmbta --use-hashtable "
 SILO="--disable-snapshots "
 TPCC = '--bench tpcc '
 YCSB = '--bench ycsb '
@@ -71,10 +72,11 @@ def basic_test(testtype, impl, threads, rmw=False):
 
 def run_test(testname, testtype, impl, threads, fileobj):
     fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads, rmw=
-                                                     testname=='readmywrites')))
+                                                     (testname=='readmywrites' or testname=='readmywrites_ht'))))
 
 def us_and_silo(testtype, threads, fileobj):
     run_test('us', testtype, MBTA, threads, fileobj)
+    run_test('ht', testtype, HT, threads, fileobj)
     run_test('silo', testtype, SILO, threads, fileobj)
 
 
@@ -127,7 +129,8 @@ def nostablesort(testtype, threads, fileobj):
 
 def rmw(testtype, threads, fileobj):
 #    patch_apply('rmw.patch')
-    run_test('readmywrites', testtype, MBTA, threads, fileobj)
+     run_test('readmywrites', testtype, MBTA, threads, fileobj)
+     run_test('readmywrites_ht', testtype, HT, threads, fileobj)
 #    patch_revoke('rmw.patch')
 
 def stdtest(f, testtype, threads, testname):
