@@ -7,14 +7,34 @@
 #include "../macros.h"
 #include "tpcc_keys.h"
 
-inline lcdf::Str EncodeK(const customer_key& k) {
-    static_assert(sizeof(k) == 12, "bad customer_key size");
-    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
-}
-inline lcdf::Str EncodeK(std::string&, const customer_key& k) {
-    return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
+template <typename T>
+inline std::string
+EncodeK(const T &t)
+{
+  const encoder<T> enc;
+  return enc.write(&t);
 }
 
+template <typename T>
+inline std::string &
+EncodeK(std::string &buf, const T &t)
+{
+  const encoder<T> enc;
+  return enc.write(buf, &t);
+}
+
+
+inline customer_key EncodeK(const customer_key& k) {
+    return k;	
+}
+inline customer_key EncodeK(std::string&, const customer_key& k) {
+    return k;
+}
+
+#define CUSTOMER_KEY_FIELDS(x, y) \
+  x(int32_t,c_w_id) \
+  y(int32_t,c_d_id) \
+  y(int32_t,c_id)
 #define CUSTOMER_VALUE_FIELDS(x, y) \
   x(float,c_discount) \
   y(inline_str_fixed<2>,c_credit) \
@@ -34,7 +54,11 @@ inline lcdf::Str EncodeK(std::string&, const customer_key& k) {
   y(uint32_t,c_since) \
   y(inline_str_fixed<2>,c_middle) \
   y(inline_str_16<500>,c_data)
+#if HASHTABLE
 DO_STRUCT2(customer, customer_key, CUSTOMER_VALUE_FIELDS)
+#else 
+DO_STRUCT(customer, CUSTOMER_KEY_FIELDS, CUSTOMER_VALUE_FIELDS)
+#endif
 
 #define CUSTOMER_NAME_IDX_KEY_FIELDS(x, y) \
   x(int32_t,c_w_id) \
@@ -54,6 +78,9 @@ inline lcdf::Str EncodeK(std::string&, const district_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 
+#define DISTRICT_KEY_FIELDS(x, y) \
+  x(int32_t,d_w_id) \
+  y(int32_t,d_id)
 #define DISTRICT_VALUE_FIELDS(x, y) \
   x(float,d_ytd) \
   y(float,d_tax) \
@@ -64,7 +91,7 @@ inline lcdf::Str EncodeK(std::string&, const district_key& k) {
   y(inline_str_8<20>,d_city) \
   y(inline_str_fixed<2>,d_state) \
   y(inline_str_fixed<9>,d_zip)
-DO_STRUCT2(district, district_key, DISTRICT_VALUE_FIELDS)
+DO_STRUCT(district, DISTRICT_KEY_FIELDS, DISTRICT_VALUE_FIELDS)
 
 inline lcdf::Str EncodeK(const history_key& k) {
     static_assert(sizeof(k) == 24, "bad sizeof(history_key)");
@@ -74,24 +101,41 @@ inline lcdf::Str EncodeK(std::string&, const history_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 
+#define HISTORY_KEY_FIELDS(x, y) \
+  x(int32_t,h_c_id) \
+  y(int32_t,h_c_d_id) \
+  y(int32_t,h_c_w_id) \
+  y(int32_t,h_d_id) \
+  y(int32_t,h_w_id) \
+  y(uint32_t,h_date)
 #define HISTORY_VALUE_FIELDS(x, y) \
   x(float,h_amount) \
   y(inline_str_8<24>,h_data)
+#if HASHTABLE
 DO_STRUCT2(history, history_key, HISTORY_VALUE_FIELDS)
+#else
+DO_STRUCT(history, HISTORY_KEY_FIELDS, HISTORY_VALUE_FIELDS)
+#endif
 
-inline uint32_t EncodeK(const item_key& k) {
+inline int32_t EncodeK(const item_key& k) {
     return k.i_id;
 }
-inline uint32_t EncodeK(std::string&, const item_key& k) {
+inline int32_t EncodeK(std::string&, const item_key& k) {
     return k.i_id;
 }
 
+#define ITEM_KEY_FIELDS(x, y) \
+  x(int32_t,i_id)
 #define ITEM_VALUE_FIELDS(x, y) \
   x(inline_str_8<24>,i_name) \
   y(float,i_price) \
   y(inline_str_8<50>,i_data) \
   y(int32_t,i_im_id)
+#if HASHTABLE
 DO_STRUCT2(item, item_key, ITEM_VALUE_FIELDS)
+#else
+DO_STRUCT(item, ITEM_KEY_FIELDS, ITEM_VALUE_FIELDS)
+#endif
 
 #define NEW_ORDER_KEY_FIELDS(x, y) \
   x(int32_t,no_w_id) \
@@ -112,14 +156,21 @@ inline lcdf::Str EncodeK(std::string&, const oorder_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 
+#define OORDER_KEY_FIELDS(x, y) \
+  x(int32_t,o_w_id) \
+  y(int32_t,o_d_id) \
+  y(int32_t,o_id)
 #define OORDER_VALUE_FIELDS(x, y) \
   x(int32_t,o_c_id) \
   y(int32_t,o_carrier_id) \
   y(int8_t,o_ol_cnt) \
   y(bool,o_all_local) \
   y(uint32_t,o_entry_d)
+#if HASHTABLE
 DO_STRUCT2(oorder, oorder_key, OORDER_VALUE_FIELDS)
-
+#else 
+DO_STRUCT(oorder, OORDER_KEY_FIELDS, OORDER_VALUE_FIELDS)
+#endif
 
 #define OORDER_C_ID_IDX_KEY_FIELDS(x, y) \
   x(int32_t,o_w_id) \
@@ -158,7 +209,9 @@ inline lcdf::Str EncodeK(std::string&, const stock_key& k) {
   y(int32_t,s_remote_cnt)
 DO_STRUCT2(stock, stock_key, STOCK_VALUE_FIELDS)
 
-
+#define STOCK_KEY_FIELDS(x, y) \
+  x(int32_t,s_w_id) \
+  y(int32_t,s_i_id)
 #define STOCK_DATA_VALUE_FIELDS(x, y)           \
   x(inline_str_8<50>,s_data) \
   y(inline_str_fixed<24>,s_dist_01) \
@@ -171,8 +224,11 @@ DO_STRUCT2(stock, stock_key, STOCK_VALUE_FIELDS)
   y(inline_str_fixed<24>,s_dist_08) \
   y(inline_str_fixed<24>,s_dist_09) \
   y(inline_str_fixed<24>,s_dist_10)
+#if HASHTABLE
 DO_STRUCT2(stock_data, stock_key, STOCK_DATA_VALUE_FIELDS)
-
+#else 
+DO_STRUCT(stock_data, STOCK_KEY_FIELDS, STOCK_DATA_VALUE_FIELDS)
+#endif
 
 inline lcdf::Str EncodeK(const warehouse_key& k) {
     static_assert(sizeof(k) == 4, "bad sizeof(warehouse_key)");
@@ -182,6 +238,8 @@ inline lcdf::Str EncodeK(std::string&, const warehouse_key& k) {
     return lcdf::Str(reinterpret_cast<const char*>(&k), sizeof(k));
 }
 
+#define WAREHOUSE_KEY_FIELDS(x, y) \
+  x(int32_t,w_id)
 #define WAREHOUSE_VALUE_FIELDS(x, y) \
   x(float,w_ytd) \
   y(float,w_tax) \
@@ -191,6 +249,6 @@ inline lcdf::Str EncodeK(std::string&, const warehouse_key& k) {
   y(inline_str_8<20>,w_city) \
   y(inline_str_fixed<2>,w_state) \
   y(inline_str_fixed<9>,w_zip)
-DO_STRUCT2(warehouse, warehouse_key, WAREHOUSE_VALUE_FIELDS)
+DO_STRUCT(warehouse, WAREHOUSE_KEY_FIELDS, WAREHOUSE_VALUE_FIELDS)
 
 #endif

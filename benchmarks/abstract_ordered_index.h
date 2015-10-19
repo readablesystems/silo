@@ -33,6 +33,14 @@ public:
 
   virtual bool get(
       void *txn,
+      const std::string &key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+      return get(txn, lcdf::Str(key), value, max_bytes_read);
+  }
+
+  virtual bool get(
+      void *txn,
       int32_t key,
       std::string &value,
       size_t max_bytes_read = std::string::npos) {
@@ -67,7 +75,7 @@ public:
    */
   virtual void scan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
@@ -79,7 +87,7 @@ public:
    */
   virtual void rscan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
@@ -105,11 +113,27 @@ public:
 
   virtual const char *
   put(void *txn,
+      const std::string &key,
+      const std::string &value) {
+      return put(txn, lcdf::Str(key), value);
+  }
+
+  virtual const char *
+  put(void *txn,
       lcdf::Str key,
       std::string &&value)
   {
       return put(txn, key, static_cast<const std::string &>(value));
   }
+
+  virtual const char *
+  put(void *txn,
+      const std::string &key,
+      std::string &&value)
+  {   
+      return put(txn, key, static_cast<const std::string &>(value));
+  }  
+
 
   virtual const char *
   put(void *txn,
@@ -164,11 +188,27 @@ public:
 
   virtual const char *
   insert(void *txn,
+         const std::string &key,
+         const std::string &value)
+  {      
+    return insert(txn, lcdf::Str(key), value);
+  } 
+
+  virtual const char *
+  insert(void *txn,
          lcdf::Str key,
          std::string &&value)
   {
       return insert(txn, key, static_cast<const std::string &>(value));
   }
+
+  virtual const char *
+  insert(void *txn,
+         const std::string &key,
+         std::string &&value)
+  {      
+      return insert(txn, key, static_cast<const std::string &>(value));
+  }   
 
   virtual const char *
   insert(void *txn,
@@ -215,16 +255,23 @@ public:
 
   virtual void remove(
       void *txn,
+      const std::string &key)
+  {   
+    remove(txn, lcdf::Str(key));
+  } 
+
+  virtual void remove(
+      void *txn,
       int32_t key)
   {
-    put(txn, key, "");
+    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)));
   }
 
   virtual void remove(
       void *txn,
       customer_key key)
   {   
-    put(txn, key, "");
+    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)));
   } 
 
 

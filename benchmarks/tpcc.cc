@@ -675,7 +675,7 @@ protected:
         const size_t sz = Size(v);
         warehouse_total_sz += sz;
         n_warehouses++;
-        tbl_warehouse(i)->insert(txn, k.w_id, Encode(obj_buf, v));
+        tbl_warehouse(i)->insert(txn, Encode(k), Encode(obj_buf, v));
 
         warehouses.push_back(v);
       }
@@ -685,7 +685,7 @@ protected:
       for (uint i = 1; i <= NumWarehouses(); i++) {
         const warehouse::key k(i);
         string warehouse_v;
-        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, k.w_id, warehouse_v));
+        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, Encode(k), warehouse_v));
         warehouse::value warehouse_temp;
         const warehouse::value *v = Decode(warehouse_v, warehouse_temp);
         ALWAYS_ASSERT(warehouses[i - 1] == *v);
@@ -746,7 +746,7 @@ protected:
         checker::SanityCheckItem(&k, &v);
         const size_t sz = Size(v);
         total_sz += sz;
-        tbl_item(1)->insert(txn, k.i_id, Encode(obj_buf, v)); // this table is shared, so any partition is OK
+        tbl_item(1)->insert(txn, EncodeK(k), Encode(obj_buf, v)); // this table is shared, so any partition is OK
 
         if (bsize != -1 && !(i % bsize)) {
           ALWAYS_ASSERT(db->commit_txn(txn));
@@ -919,7 +919,7 @@ protected:
           const size_t sz = Size(v);
           district_total_sz += sz;
           n_districts++;
-          tbl_district(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
+          tbl_district(w)->insert(txn, Encode(k), Encode(obj_buf, v));
 
           if (bsize != -1 && !((cnt + 1) % bsize)) {
             ALWAYS_ASSERT(db->commit_txn(txn));
@@ -1024,7 +1024,7 @@ protected:
               checker::SanityCheckCustomer(&k, &v);
               const size_t sz = Size(v);
               total_sz += sz;
-              tbl_customer(w)->insert(txn, k, Encode(obj_buf, v));
+              tbl_customer(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
 
               // customer name index
               const customer_name_idx::key k_idx(k.c_w_id, k.c_d_id, v.c_last.str(true), v.c_first.str(true));
@@ -1300,19 +1300,19 @@ tpcc_worker::txn_new_order()
   try {
     ssize_t ret = 0;
     const customer::key k_c(warehouse_id, districtID, customerID);
-    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v));
+    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
     customer::value v_c_temp;
     const customer::value *v_c = Decode(obj_v, v_c_temp);
     checker::SanityCheckCustomer(&k_c, v_c);
 
     const warehouse::key k_w(warehouse_id);
-    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, k_w.w_id, obj_v));
+    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, Encode(obj_key0, k_w), obj_v));
     warehouse::value v_w_temp;
     const warehouse::value *v_w = Decode(obj_v, v_w_temp);
     checker::SanityCheckWarehouse(&k_w, v_w);
 
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
@@ -1329,7 +1329,7 @@ tpcc_worker::txn_new_order()
     if (!g_new_order_fast_id_gen) {
       district::value v_d_new(*v_d);
       v_d_new.d_next_o_id++;
-      tbl_district(warehouse_id)->put(txn, EncodeK(str(), k_d), Encode(str(), v_d_new));
+      tbl_district(warehouse_id)->put(txn, Encode(str(), k_d), Encode(str(), v_d_new));
     }
 
     const oorder::key k_oo(warehouse_id, districtID, k_no.no_o_id);
@@ -1355,7 +1355,7 @@ tpcc_worker::txn_new_order()
       const uint ol_quantity = orderQuantities[ol_number - 1];
 
       const item::key k_i(ol_i_id);
-      ALWAYS_ASSERT(tbl_item(1)->get(txn, k_i.i_id, obj_v));
+      ALWAYS_ASSERT(tbl_item(1)->get(txn, EncodeK(obj_key0, k_i), obj_v));
       item::value v_i_temp;
       const item::value *v_i = Decode(obj_v, v_i_temp);
       checker::SanityCheckItem(&k_i, v_i);
@@ -1522,13 +1522,13 @@ tpcc_worker::txn_delivery()
 
       // update customer
       const customer::key k_c(warehouse_id, d, c_id);
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
 
       customer::value v_c_temp;
       const customer::value *v_c = Decode(obj_v, v_c_temp);
       customer::value v_c_new(*v_c);
       v_c_new.c_balance += ol_total;
-      tbl_customer(warehouse_id)->put(txn, k_c, Encode(str(), v_c_new));
+      tbl_customer(warehouse_id)->put(txn, EncodeK(str(), k_c), Encode(str(), v_c_new));
     }
     measure_txn_counters(txn, "txn_delivery");
     if (likely(db->commit_txn(txn)))
@@ -1584,24 +1584,24 @@ tpcc_worker::txn_payment()
     ssize_t ret = 0;
 
     const warehouse::key k_w(warehouse_id);
-    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, k_w.w_id, obj_v));
+    ALWAYS_ASSERT(tbl_warehouse(warehouse_id)->get(txn, Encode(obj_key0, k_w), obj_v));
     warehouse::value v_w_temp;
     const warehouse::value *v_w = Decode(obj_v, v_w_temp);
     checker::SanityCheckWarehouse(&k_w, v_w);
 
     warehouse::value v_w_new(*v_w);
     v_w_new.w_ytd += paymentAmount;
-    tbl_warehouse(warehouse_id)->put(txn, k_w.w_id, Encode(str(), v_w_new));
+    tbl_warehouse(warehouse_id)->put(txn, Encode(str(), k_w), Encode(str(), v_w_new));
 
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
 
     district::value v_d_new(*v_d);
     v_d_new.d_ytd += paymentAmount;
-    tbl_district(warehouse_id)->put(txn, EncodeK(str(), k_d), Encode(str(), v_d_new));
+    tbl_district(warehouse_id)->put(txn, Encode(str(), k_d), Encode(str(), v_d_new));
 
     customer::key k_c;
     customer::value v_c;
@@ -1642,7 +1642,7 @@ tpcc_worker::txn_payment()
       k_c.c_w_id = customerWarehouseID;
       k_c.c_d_id = customerDistrictID;
       k_c.c_id = v_c_idx->c_id;
-      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, k_c, obj_v));
+      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
 
     } else {
@@ -1651,7 +1651,7 @@ tpcc_worker::txn_payment()
       k_c.c_w_id = customerWarehouseID;
       k_c.c_d_id = customerDistrictID;
       k_c.c_id = customerID;
-      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, k_c, obj_v));
+      ALWAYS_ASSERT(tbl_customer(customerWarehouseID)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
     }
     checker::SanityCheckCustomer(&k_c, &v_c);
@@ -1675,7 +1675,7 @@ tpcc_worker::txn_payment()
       NDB_MEMCPY((void *) v_c_new.c_data.data(), &buf[0], v_c_new.c_data.size());
     }
 
-    tbl_customer(customerWarehouseID)->put(txn, k_c, Encode(str(), v_c_new));
+    tbl_customer(customerWarehouseID)->put(txn, EncodeK(str(), k_c), Encode(str(), v_c_new));
 
     const history::key k_h(k_c.c_d_id, k_c.c_w_id, k_c.c_id, districtID, warehouse_id, ts);
     history::value v_h;
@@ -1787,7 +1787,7 @@ tpcc_worker::txn_order_status()
       k_c.c_w_id = warehouse_id;
       k_c.c_d_id = districtID;
       k_c.c_id = v_c_idx->c_id;
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
 
     } else {
@@ -1796,7 +1796,7 @@ tpcc_worker::txn_order_status()
       k_c.c_w_id = warehouse_id;
       k_c.c_d_id = districtID;
       k_c.c_id = customerID;
-      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v));
+      ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v));
       Decode(obj_v, v_c);
     }
     checker::SanityCheckCustomer(&k_c, &v_c);
@@ -1905,7 +1905,7 @@ tpcc_worker::txn_stock_level()
   // locking is un-necessary (since we can just read from some old snapshot)
   try {
     const district::key k_d(warehouse_id, districtID);
-    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, EncodeK(obj_key0, k_d), obj_v));
+    ALWAYS_ASSERT(tbl_district(warehouse_id)->get(txn, Encode(obj_key0, k_d), obj_v));
     district::value v_d_temp;
     const district::value *v_d = Decode(obj_v, v_d_temp);
     checker::SanityCheckDistrict(&k_d, v_d);
@@ -1936,7 +1936,7 @@ tpcc_worker::txn_stock_level()
           ANON_REGION("StockLevelLoopJoinGet:", &stock_level_probe2_cg);
           ALWAYS_ASSERT(tbl_stock(warehouse_id)->get(txn, EncodeK(obj_key0, k_s), obj_v, nbytesread));
         }
-        INVARIANT(obj_v.size() <= nbytesread);
+       // INVARIANT(obj_v.size() <= nbytesread);
         const uint8_t *ptr = (const uint8_t *) obj_v.data();
         int16_t i16tmp;
         ptr = serializer<int16_t, true>::read(ptr, &i16tmp);
@@ -1988,7 +1988,9 @@ private:
   static bool
   UseHashtable(const char *name)
   {
-    if (!use_hashtable) return false;
+#if !HASHTABLE
+    return false;
+#endif
     return strcmp("customer", name) == 0 || 
 	   //strcmp("district", name) == 0 ||
 	   strcmp("history", name) == 0 ||

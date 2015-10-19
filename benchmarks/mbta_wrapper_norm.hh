@@ -81,7 +81,7 @@ public:
   }
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -95,7 +95,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -152,7 +152,7 @@ public:
 
   const char *put(
       void* txn,
-      lcdf::Str key,
+      const lcdf::Str key,
       const std::string &value)
   {
 #if OP_LOGGING
@@ -188,7 +188,7 @@ public:
   }
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -196,7 +196,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -307,7 +307,7 @@ public:
   }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -315,7 +315,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -432,7 +432,7 @@ public:
   }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -440,7 +440,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -539,7 +539,7 @@ public:
   }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -547,7 +547,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -645,7 +645,7 @@ public:
   }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -653,7 +653,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -752,7 +752,7 @@ public:
   }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -760,7 +760,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {

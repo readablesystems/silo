@@ -491,7 +491,7 @@ protected:
         const size_t sz = Size(v);
         warehouse_total_sz += sz;
         n_warehouses++;
-        tbl_warehouse(i)->insert(txn, k.w_id, Encode(obj_buf, v));
+        tbl_warehouse(i)->insert(txn, Encode(k), Encode(obj_buf, v));
 
         warehouses.push_back(v);
       }
@@ -501,7 +501,7 @@ protected:
       for (uint i = 1; i <= NumWarehouses(); i++) {
         const warehouse::key k(i);
         string warehouse_v;
-        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, k.w_id, warehouse_v));
+        ALWAYS_ASSERT(tbl_warehouse(i)->get(txn, Encode(k), warehouse_v));
         warehouse::value warehouse_temp;
         const warehouse::value *v = Decode(warehouse_v, warehouse_temp);
         ALWAYS_ASSERT(warehouses[i - 1] == *v);
@@ -562,7 +562,7 @@ protected:
 
         const size_t sz = Size(v);
         total_sz += sz;
-        tbl_item(1)->insert(txn, k.i_id, Encode(obj_buf, v)); // this table is shared, so any partition is OK
+        tbl_item(1)->insert(txn, EncodeK(k), Encode(obj_buf, v)); // this table is shared, so any partition is OK
 
         if (bsize != -1 && !(i % bsize)) {
           ALWAYS_ASSERT(db->commit_txn(txn));
@@ -840,7 +840,7 @@ protected:
 
               const size_t sz = Size(v);
               total_sz += sz;
-              tbl_customer(w)->insert(txn, k, Encode(obj_buf, v));
+              tbl_customer(w)->insert(txn, EncodeK(k), Encode(obj_buf, v));
 
             }
             if (db->commit_txn(txn)) {
@@ -1038,7 +1038,7 @@ tpcc_worker::txn_read_items()
       const uint ol_i_id = itemIDs[ol_number - 1];
 
       const item::key k_i(ol_i_id);
-      ALWAYS_ASSERT(tbl_item(1)->get(txn, k_i.i_id, obj_v));
+      ALWAYS_ASSERT(tbl_item(1)->get(txn, EncodeK(obj_key0, k_i), obj_v));
 
     }
 
@@ -1063,7 +1063,7 @@ tpcc_worker::txn_read_customer()
   scoped_str_arena s_arena(arena);
   try {
     const customer::key k_c(warehouse_id, districtID, customerID);
-    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v)); 
+    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v)); 
     if (likely(db->commit_txn(txn)))
       return txn_result(true, 0);
   } catch (abstract_db::abstract_abort_exception &ex) {
@@ -1083,13 +1083,13 @@ tpcc_worker::txn_update_customer()
   scoped_str_arena s_arena(arena);
   try {
     const customer::key k_c(warehouse_id, districtID, customerID);
-    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, k_c, obj_v)); 
+    ALWAYS_ASSERT(tbl_customer(warehouse_id)->get(txn, EncodeK(obj_key0, k_c), obj_v)); 
     
     customer::value v_c_temp;
     const customer::value *v_c = Decode(obj_v, v_c_temp);
     customer::value v_c_new(*v_c);
     v_c_new.c_balance += 10;
-    tbl_customer(warehouse_id)->put(txn, k_c, Encode(str(), v_c_new));
+    tbl_customer(warehouse_id)->put(txn, EncodeK(str(), k_c), Encode(str(), v_c_new));
   
     if (likely(db->commit_txn(txn)))
       return txn_result(true, 0);

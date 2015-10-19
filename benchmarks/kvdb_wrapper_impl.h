@@ -408,7 +408,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::scan(
     void *txn,
-    lcdf::Str start_key,
+    const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -423,7 +423,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::rscan(
     void *txn,
-    lcdf::Str start_key,
+    const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)

@@ -69,13 +69,13 @@ public:
          const std::string &value);
   virtual void scan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);
   virtual void rscan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);

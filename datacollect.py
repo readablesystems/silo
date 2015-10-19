@@ -23,16 +23,19 @@ try:
 except: pass
 
 CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
+CMD_HASHTABLE="out-perf.ht.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
+CMD_HASHTABLE_RMW="out-perf.ht.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 CMD_RMW="out-perf.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 MAKE_CMD_TEMPL='MODE=perf %s make -j dbtest'
 MAKE_CMD = MAKE_CMD_TEMPL % ''
 MAKE_CMD_RMW = MAKE_CMD_TEMPL % 'STO_RMW=1'
+MAKE_CMD_HASHTABLE = MAKE_CMD_TEMPL % 'HASHTABLE=1'
+MAKE_CMD_HASHTABLE_RMW = MAKE_CMD_TEMPL % 'HASHTABLE=1 STO_RMW=1'
 SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
 NTHREADS = 24
 MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
 MANY_THREADED= MANY_THREADS(NTHREADS)
 MBTA="-dmbta "
-HT="-dmbta --use-hashtable "
 SILO="--disable-snapshots "
 TPCC = '--bench tpcc '
 YCSB = '--bench ycsb '
@@ -45,8 +48,12 @@ DRY_RUN = False
 
 BEST = False
 
-def basic_test(testtype, impl, threads, rmw=False):
-    cmd = CMD_RMW if rmw else CMD
+def basic_test(testtype, impl, threads, rmw=False, hashtable=False):
+    cmd = CMD
+    if hashtable and rmw: cmd = CMD_HASHTABLE_RMW
+    elif hashtable: cmd = CMD_HASHTABLE
+    elif rmw: cmd = CMD_RMW
+
     cmd += threads + impl + testtype
     
     pts = []
@@ -72,11 +79,12 @@ def basic_test(testtype, impl, threads, rmw=False):
 
 def run_test(testname, testtype, impl, threads, fileobj):
     fileobj.write("%s\n%s\n" % (testname, basic_test(testtype, impl, threads, rmw=
-                                                     (testname=='readmywrites' or testname=='readmywrites_ht'))))
+                                                     (testname=='readmywrites' or testname=='readmywrites_ht'),
+						hashtable=(testname=='ht' or testname=='readmywrites_ht'))))
 
 def us_and_silo(testtype, threads, fileobj):
     run_test('us', testtype, MBTA, threads, fileobj)
-    run_test('ht', testtype, HT, threads, fileobj)
+    run_test('ht', testtype, MBTA, threads, fileobj)
     run_test('silo', testtype, SILO, threads, fileobj)
 
 
@@ -91,6 +99,8 @@ def ignore_run(c):
 
 def remake():
     simple_run(MAKE_CMD)
+    simple_run(MAKE_CMD_HASHTABLE)
+    simple_run(MAKE_CMD_HASHTABLE_RMW)
     simple_run(MAKE_CMD_RMW)
 
 def patch_apply(name):
@@ -130,7 +140,7 @@ def nostablesort(testtype, threads, fileobj):
 def rmw(testtype, threads, fileobj):
 #    patch_apply('rmw.patch')
      run_test('readmywrites', testtype, MBTA, threads, fileobj)
-     run_test('readmywrites_ht', testtype, HT, threads, fileobj)
+     run_test('readmywrites_ht', testtype, MBTA, threads, fileobj)
 #    patch_revoke('rmw.patch')
 
 def stdtest(f, testtype, threads, testname):

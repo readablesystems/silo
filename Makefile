@@ -21,7 +21,7 @@ USE_MALLOC_MODE ?= 1
 MODE ?= perf
 
 STO_RMW ?= 0
-
+HASHTABLE ?= 0
 GPROF ?= 0
 ###############
 
@@ -31,6 +31,7 @@ EVENT_COUNTERS_S=$(strip $(EVENT_COUNTERS))
 USE_MALLOC_MODE_S=$(strip $(USE_MALLOC_MODE))
 MODE_S=$(strip $(MODE))
 STO_RMW_S=$(strip $(STO_RMW))
+HASHTABLE_S=$(strip $(HASHTABLE))
 GPROF_S=$(strip $(GPROF))
 MASSTREE_CONFIG:=--enable-max-key-len=1024
 
@@ -52,7 +53,10 @@ endif
 ifeq ($(STO_RMW_S),1)
 	OSUFFIX_R=.rmw
 endif
-OSUFFIX=$(OSUFFIX_D)$(OSUFFIX_S)$(OSUFFIX_E)$(OSUFFIX_R)
+ifeq ($(HASHTABLE_S),1)
+        OSUFFIX_H=.ht
+endif
+OSUFFIX=$(OSUFFIX_D)$(OSUFFIX_S)$(OSUFFIX_E)$(OSUFFIX_H)$(OSUFFIX_R)
 
 ifeq ($(MODE_S),perf)
 	O := out-perf$(OSUFFIX)
@@ -97,7 +101,7 @@ CXXFLAGS += -include masstree/config.h
 OBJDEP += masstree/config.h
 O := $(O).masstree
 CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
-
+CXXFLAGS += -DHASHTABLE=$(HASHTABLE_S)
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
 ifeq ($(GPROF_S),1)
