@@ -9,8 +9,8 @@ tableau20 = None
 
 COLORZ = True
 
-NAME_MAP = {'us\n': 'No read-my-writes', 'silo\n': 'Silo', 'readmywrites\n': 'STO',
-            'nodupreads\n': 'No duplicate reads', 'nodupnohash\n': 'No hash table'}
+NAME_MAP = {'us\n': 'No read-my-writes', 'silo\n': 'Silo', 'readmywrites\n': 'Read-my-writes',
+            'nodupreads\n': 'No read-only items', 'nodupnohash\n': 'No hash table'}
 PERM = [3, 2, 1, 0]
 #[1, 0, 2]
 
@@ -139,17 +139,18 @@ def plot(data, min, max, labels, title):
     n_types = len(data.values())
     width = .3# / n_types
     bars = []
+    GAP = .13
     for (d, a, b, c) in zip(permute(PERM, data.values()), permute(PERM, min.values()), permute(PERM, max.values()), colors):
         pts = d.values()
         minerr = numpy.subtract(pts, a.values())
         maxerr = numpy.subtract(b.values(), pts)
         bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c, yerr = [minerr, maxerr], ecolor = 'k'))
-        cur_width += width + .1
+        cur_width += width + GAP
 
 #    ax.set_xticks(inds + width * n_types / 2.0)
     
-    ax.set_xticks(inds + width / 2.0 + .1 + [(width+.1) * n for n in xrange(n_types)])
-    ax.set_xticklabels([NAME_MAP[x] for x in permute(PERM, data.keys())], size=10)
+    ax.set_xticks(inds + width / 2.0 + .1 + [(width+GAP) * n for n in xrange(n_types)])
+    ax.set_xticklabels([NAME_MAP[x] for x in permute(PERM, data.keys())], size=12)
     ax.set_ylabel('Thousands of transactions per second' + ' per core' if SCALE_CORE else '', rotation=90)
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
 #    if not SCALE_CORE:
