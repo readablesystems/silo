@@ -1995,6 +1995,7 @@ private:
   static bool
   UseHashtable(const char *name)
   {
+    return false;
     //return false;
     return //strcmp("customer", name) == 0 || 
 	   //strcmp("district", name) == 0 ||

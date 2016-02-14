@@ -386,7 +386,7 @@ public:
     }
 
 #endif
-    std::cout << "Find traversal: " << ct << std::endl;
+   //std::cout << "Find traversal: " << ct << std::endl;
     //std::cout << "Max traversal: " << max_ct << std::endl;
 #if OP_LOGGING
     printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
