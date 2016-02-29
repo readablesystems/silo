@@ -9,8 +9,8 @@ tableau20 = None
 
 COLORZ = True
 
-NAME_MAP = {'us\n': 'STO-', 'silo\n': 'Silo', 'readmywrites\n': 'STO'}
-PERM = [1, 0, 2]
+NAME_MAP = {'us\n': 'STO-', 'silo\n': 'Silo', 'readmywrites\n': 'STO', 'ht\n': 'HT-', 'readmywrites_ht\n': 'HT'}
+PERM = [1, 0, 3, 2, 4]
 
 SCALE_CORE = False
 
@@ -121,7 +121,7 @@ def plot(data, min, max, labels, title):
     if COLORZ:
         colors = tableau20
     else:
-        colors = [(0,0,0), (.5,.5,.5), (.7,.7,.7)]
+        colors = [(0,0,0), (.2,.2,.2), (.4,.4,.4), (.6,.6,.6), (.8,.8,.8)]
 
     if LINE:
         return line_graph(data, labels, title, colors)
@@ -138,7 +138,7 @@ def plot(data, min, max, labels, title):
         bars.append(ax.bar(inds + cur_width + .1, pts, width, color=c, yerr = [minerr, maxerr], ecolor = 'k'))
         cur_width += width
 
-    ax.set_xticks(inds + width * n_types / 2.0)
+   ax.set_xticks(inds + width * n_types / 2.0)
     ax.set_xticklabels(labels, size=10)
     ax.set_ylabel('Thousands of transactions per second' + ' per core' if SCALE_CORE else '', rotation=90)
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))

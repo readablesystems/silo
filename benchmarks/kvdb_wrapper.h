@@ -62,11 +62,11 @@ public:
   virtual const char * put(
       void *txn,
       lcdf::Str key,
-      const std::string &value);
+      std::string&& value);
   virtual const char *
   insert(void *txn,
          lcdf::Str key,
-         const std::string &value);
+         std::string&& value);
   virtual void scan(
       void *txn,
       const std::string &start_key,
