@@ -22,7 +22,6 @@
 #include "amd64.h"
 #include "rcu.h"
 #include "util.h"
-#include "small_vector.h"
 #include "ownership_checker.h"
 
 #include "masstree/masstree_scan.hh"
@@ -38,15 +37,15 @@ class simple_threadinfo {
     simple_threadinfo()
         : ts_(0) { // XXX?
     }
-    class rcu_callback {
+    class mrcu_callback {
     public:
       virtual void operator()(simple_threadinfo& ti) = 0;
     };
 
  private:
-    static inline void rcu_callback_function(void* p) {
+    static inline void mrcu_callback_function(void* p) {
       simple_threadinfo ti;
-      static_cast<rcu_callback*>(p)->operator()(ti);
+      static_cast<mrcu_callback*>(p)->operator()(ti);
     }
 
  public:
@@ -75,9 +74,11 @@ class simple_threadinfo {
     void increment_timestamp() {
 	ts_ += 2;
     }
-    void advance_timestamp(kvtimestamp_t x) {
-	if (circular_int<kvtimestamp_t>::less(ts_, x))
-	    ts_ = x;
+    template <typename T>
+    void observe_phantoms(T* n) {
+        kvtimestamp_t pe = n->phantom_epoch_[0];
+	if (circular_int<kvtimestamp_t>::less(ts_, pe))
+	    ts_ = pe;
     }
 
     // event counters
@@ -147,9 +148,9 @@ class simple_threadinfo {
     }
 
     // RCU
-    void rcu_register(rcu_callback *cb) {
+    void rcu_register(mrcu_callback *cb) {
       scoped_rcu_base<false> guard;
-      rcu::s_instance.free_with_fn(cb, rcu_callback_function);
+      rcu::s_instance.free_with_fn(cb, mrcu_callback_function);
     }
 
   private:
@@ -604,7 +605,7 @@ inline bool mbtree<P>::insert(const key_type &k, value_type v,
   Masstree::tcursor<P> lp(table_, k.data(), k.length());
   bool found = lp.find_insert(ti);
   if (!found)
-    ti.advance_timestamp(lp.node_timestamp());
+    ti.observe_phantoms(lp.node());
   if (found && old_v)
     *old_v = lp.value();
   lp.value() = v;
@@ -626,7 +627,7 @@ inline bool mbtree<P>::insert_if_absent(const key_type &k, value_type v,
   Masstree::tcursor<P> lp(table_, k.data(), k.length());
   bool found = lp.find_insert(ti);
   if (!found) {
-    ti.advance_timestamp(lp.node_timestamp());
+    ti.observe_phantoms(lp.node());
     lp.value() = v;
     if (insert_info) {
       insert_info->node = lp.node();
