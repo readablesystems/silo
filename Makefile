@@ -22,6 +22,9 @@ MODE ?= perf
 
 STO_RMW ?= 0
 
+CC ?= gcc
+CXX ?= c++
+
 ###############
 
 DEBUG_S=$(strip $(DEBUG))
@@ -30,7 +33,7 @@ EVENT_COUNTERS_S=$(strip $(EVENT_COUNTERS))
 USE_MALLOC_MODE_S=$(strip $(USE_MALLOC_MODE))
 MODE_S=$(strip $(MODE))
 STO_RMW_S=$(strip $(STO_RMW))
-MASSTREE_CONFIG:=--enable-max-key-len=1024
+MASSTREE_CONFIG:=CC="$(CC)" CXX="$(CXX)" --enable-max-key-len=1024
 
 ifeq ($(DEBUG_S),1)
 	OSUFFIX_D=.debug
@@ -226,7 +229,7 @@ DEP_MAIN_CONFIG := $(shell mkdir -p $(O); echo >$(O)/buildstamp; echo "DEP_MAIN_
 endif
 
 ifneq ($(strip $(MASSTREE_CONFIG)),$(strip $(DEP_MASSTREE_CONFIG)))
-DEP_MASSTREE_CONFIG := $(shell mkdir -p $(O); echo >$(O)/buildstamp.masstree; echo "DEP_MASSTREE_CONFIG:=$(MASSTREE_CONFIG)" >masstree/_masstree_config.d)
+DEP_MASSTREE_CONFIG := $(shell mkdir -p $(O); echo >$(O)/buildstamp.masstree; echo DEP_MASSTREE_CONFIG:='$(MASSTREE_CONFIG)' >masstree/_masstree_config.d)
 endif
 
 $(O)/buildstamp $(O)/buildstamp.bench $(O)/buildstamp.masstree:
