@@ -398,8 +398,8 @@ public:
   thread_init(bool loader)
   {
     static int tidcounter = 0;
-    Transaction::threadid = __sync_fetch_and_add(&tidcounter, 1);
-    if (Transaction::threadid == 0) {
+    TThread::set_id(__sync_fetch_and_add(&tidcounter, 1));
+    if (TThread::id() == 0) {
       // someone has to do this (they don't provide us with a general init callback)
       mbta_ordered_index::mbta_type::static_init();
       // need this too

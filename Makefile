@@ -156,7 +156,9 @@ BENCH_SRCFILES = benchmarks/bench.cc \
 	benchmarks/tpcc.cc \
 	benchmarks/ycsb.cc \
 	benchmarks/sto/Transaction.cc \
-	benchmarks/sto/MassTrans.cc
+	benchmarks/sto/MassTrans.cc \
+	benchmarks/sto/TRcu.cc \
+	benchmarks/sto/Packer.cc
 
 BENCH_OBJFILES := $(patsubst %.cc, $(O)/%.o, $(BENCH_SRCFILES))
 
