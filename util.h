@@ -19,7 +19,7 @@
 #include <cxxabi.h>
 
 #include "macros.h"
-#include "small_vector.h"
+#include "silo_small_vector.h"
 
 namespace util {
 
@@ -426,7 +426,7 @@ struct std_pair_first_cmp {
 template <typename T, size_t SmallSize = SMALL_SIZE_VEC>
 struct vec {
 #ifdef USE_SMALL_CONTAINER_OPT
-  typedef small_vector<T, SmallSize> type;
+  typedef silo_small_vector<T, SmallSize> type;
 #else
   typedef std::vector<T> type;
 #endif
