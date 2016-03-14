@@ -26,7 +26,7 @@ CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPT
 CMD_HASHTABLE="out-perf.ht.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 CMD_HASHTABLE_RMW="out-perf.ht.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 CMD_RMW="out-perf.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
-MAKE_CMD_TEMPL='MODE=perf %s make -j dbtest'
+MAKE_CMD_TEMPL='MODE=perf CC=gcc CXX=c++-5.3\ -std=gnu++0x %s make -j dbtest'
 MAKE_CMD = MAKE_CMD_TEMPL % ''
 MAKE_CMD_RMW = MAKE_CMD_TEMPL % 'STO_RMW=1'
 MAKE_CMD_HASHTABLE = MAKE_CMD_TEMPL % 'HASHTABLE=1'
