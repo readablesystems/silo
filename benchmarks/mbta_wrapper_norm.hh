@@ -5,6 +5,7 @@
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
 #include "sto/Hashtable.hh"
+#include "sto/StringWrapper.hh"
 #include <unordered_map> 
 //#include "tpcc.h"
 
@@ -73,7 +74,7 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut<false>(key, std::move(value));
+        mbta.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
@@ -82,14 +83,14 @@ public:
                      lcdf::Str key,
                      std::string&& value)
   {
-    STD_OP(mbta.transInsert<false>(key, std::move(value)); return 0;)
+    STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
   }
 
   void remove(void *txn, const std::string &key) {
 #if OP_LOGGING
     mt_del++;
 #endif
-     STD_OP(mbta.transDelete<false>(key));
+    STD_OP(mbta.transDelete<true>(key));
   }
 
   void scan(void *txn,
