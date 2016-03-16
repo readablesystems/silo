@@ -98,9 +98,13 @@ def ignore_run(c):
     simple_run(c + ' > /dev/null 2> /dev/null')
 
 def remake():
-    simple_run(MAKE_CMD)
+    print MAKE_CMD
+    simple_run(MAKE_CMD) 
+    print MAKE_CMD_HASHTABLE
     simple_run(MAKE_CMD_HASHTABLE)
+    print MAKE_CMD_HASHTABLE_RMW
     simple_run(MAKE_CMD_HASHTABLE_RMW)
+    print MAKE_CMD_RMW
     simple_run(MAKE_CMD_RMW)
 
 def patch_apply(name):

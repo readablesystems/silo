@@ -68,102 +68,102 @@ public:
           });
   }
   
-  const char *insert(void *txn,
-                     lcdf::Str key,
-                     const std::string &value)
-  {
-    STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
-  }
+const char *insert(void *txn,
+	     lcdf::Str key,
+	     const std::string &value)
+{
+STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
+}
 
-  void remove(void *txn, lcdf::Str key) {
+void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
-    mt_del++;
+mt_del++;
 #endif
-    STD_OP(mbta.transDelete<true>(key));
-  }
+STD_OP(mbta.transDelete<true>(key));
+}
 
-  void scan(void *txn,
-            const std::string &start_key,
-            const std::string *end_key,
-            scan_callback &callback,
-            str_arena *arena = nullptr) {
+void scan(void *txn,
+    const std::string &start_key,
+    const std::string *end_key,
+    scan_callback &callback,
+    str_arena *arena = nullptr) {
 #if OP_LOGGING
-    mt_scan++;
+mt_scan++;
 #endif    
-    mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
-          return callback.invoke(key.data(), key.length(), value);
-        }, arena));
-  }
+mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
+STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+  return callback.invoke(key.data(), key.length(), value);
+}, arena));
+}
 
-  void rscan(void *txn,
-             const std::string &start_key,
-             const std::string *end_key,
-             scan_callback &callback,
-             str_arena *arena = nullptr) {
+void rscan(void *txn,
+     const std::string &start_key,
+     const std::string *end_key,
+     scan_callback &callback,
+     str_arena *arena = nullptr) {
 #if 1
 #if OP_LOGGING
-    mt_rscan++;
+mt_rscan++;
 #endif
-    mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
-          return callback.invoke(key.data(), key.length(), value);
-        }, arena));
+mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
+STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+  return callback.invoke(key.data(), key.length(), value);
+}, arena));
 #endif
-  }
+}
 
-  size_t size() const
-  {
-    return mbta.approx_size();
-  }
+size_t size() const
+{
+return mbta.approx_size();
+}
 
-  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
-  std::map<std::string, uint64_t>
-  clear() {
-    throw 2;
-  }
+// TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+std::map<std::string, uint64_t>
+clear() {
+throw 2;
+}
 
-  typedef MassTrans<std::string, versioned_str_struct, false/*opacity*/> mbta_type;
+typedef MassTrans<std::string, versioned_str_struct, false/*opacity*/> mbta_type;
 private:
-  friend class mbta_wrapper;
-  mbta_type mbta;
+friend class mbta_wrapper;
+mbta_type mbta;
 
-  const std::string name;
+const std::string name;
 
-  mbta_wrapper *db;
+mbta_wrapper *db;
 
 };
 
 class ht_ordered_index_string : public abstract_ordered_index {
 public:
-  ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
 
-  std::string *arena(void);
+std::string *arena(void);
 
-  bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
+bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
 #if OP_LOGGING
-    ht_get++;
+ht_get++;
 #endif
-    STD_OP({
-	// TODO: we'll still be faster if we just add support for max_bytes_read
-        bool ret = ht.transGet(key, value);
-        // TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
-	return ret;
-	  });
-  }
+STD_OP({
+// TODO: we'll still be faster if we just add support for max_bytes_read
+bool ret = ht.transGet(key, value);
+// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
+return ret;
+  });
+}
 
-  const char *put(
-      void* txn,
-      const lcdf::Str key,
-      const std::string &value)
-  {
+const char *put(
+void* txn,
+const lcdf::Str key,
+const std::string &value)
+{
 #if OP_LOGGING
-    ht_put++;
+ht_put++;
 #endif
-    // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
-    // may be worth investigating if we can use that optimization to avoid copying keys
-    STD_OP({
-	ht.transPut<false>(key, value);
+// TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
+// may be worth investigating if we can use that optimization to avoid copying keys
+STD_OP({
+ht.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
@@ -176,7 +176,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-	ht.transPut<false>(key, value); return 0;
+	ht.transPut<true>(key, StringWrapper(value)); return 0;
 	});
   }
 
@@ -271,7 +271,7 @@ public:
     ht_put++;
 #endif
     STD_OP({
-        ht.transPut<false>(key, value);
+        ht.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
@@ -292,7 +292,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-        ht.transPut<false>(key, value); return 0;});
+        ht.transPut<true>(key, StringWrapper(value)); return 0;});
   }
 
 
@@ -396,7 +396,7 @@ public:
     ht_put++;
 #endif
     STD_OP({
-        ht.transPut<false>(key, value);
+        ht.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
@@ -417,7 +417,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-        ht.transPut<false>(key, value); return 0;});
+        ht.transPut<true>(key, StringWrapper(value)); return 0;});
   }
 
 
@@ -512,7 +512,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(history_key));
         const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
-        ht.transPut<false>(k, value);
+        ht.transPut<true>(k, StringWrapper(value));
         return 0;
           });
   }
@@ -527,7 +527,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(history_key));
         const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
-        ht.transPut<false>(k, value); return 0;});
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
@@ -618,7 +618,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(oorder_key));
         const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
-        ht.transPut<false>(k, value);
+        ht.transPut<true>(k, StringWrapper(value));
         return 0;
           });
   }
@@ -633,7 +633,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(oorder_key));
         const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
-        ht.transPut<false>(k, value); return 0;});
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
@@ -725,7 +725,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(stock_key));
         const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
-        ht.transPut<false>(k, value);
+        ht.transPut<true>(k, StringWrapper(value));
         return 0;
           });
   }
@@ -740,7 +740,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(stock_key));
         const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
-        ht.transPut<false>(k, value); return 0;});
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
