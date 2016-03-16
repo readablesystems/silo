@@ -53,7 +53,7 @@ public:
     void *txn = db->new_txn(txn_flags, arena, txn_buf());
     try {
       const string k = queue_key(id, ctr);
-      tbl->insert(txn, k, std::string(queue_values));
+      tbl->insert(txn, k, queue_values);
       if (likely(db->commit_txn(txn))) {
         ctr++;
         return txn_result(true, queue_values.size());
@@ -205,7 +205,9 @@ protected:
         if (nbatches == 0) {
           void *txn = db->new_txn(txn_flags, arena, txn_buf());
           for (size_t j = 0; j < nkeys; j++) {
-            tbl->insert(txn, queue_key(id, j), std::string(queue_values));
+            const string k = queue_key(id, j);
+            const string &v = queue_values;
+            tbl->insert(txn, k, v);
           }
           if (verbose)
             cerr << "batch 1/1 done" << endl;
@@ -215,7 +217,9 @@ protected:
             size_t keyend = (i == nbatches - 1) ? nkeys : (i + 1) * batchsize;
             void *txn = db->new_txn(txn_flags, arena, txn_buf());
             for (size_t j = i * batchsize; j < keyend; j++) {
-              tbl->insert(txn, queue_key(id, j), std::string(queue_values));
+              const string k = queue_key(id, j);
+              const string &v = queue_values;
+              tbl->insert(txn, k, v);
             }
             if (verbose)
               cerr << "batch " << (i + 1) << "/" << nbatches << " done" << endl;

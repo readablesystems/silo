@@ -334,7 +334,7 @@ const char *
 kvdb_ordered_index<UseConcurrencyControl>::put(
     void *txn,
     lcdf::Str key,
-    std::string&& value)
+    const std::string &value)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
   ANON_REGION("kvdb_ordered_index::put:", &private_::kvdb_put_probe0_cg);
@@ -366,7 +366,7 @@ template <bool UseConcurrencyControl>
 const char *
 kvdb_ordered_index<UseConcurrencyControl>::insert(void *txn,
                                                   lcdf::Str key,
-                                                  std::string&& value)
+                                                  const std::string &value)
 {
   typedef basic_kvdb_record<UseConcurrencyControl> kvdb_record;
   ANON_REGION("kvdb_ordered_index::insert:", &private_::kvdb_insert_probe0_cg);
@@ -408,7 +408,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::scan(
     void *txn,
-    lcdf::Str start_key,
+    const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)
@@ -423,7 +423,7 @@ template <bool UseConcurrencyControl>
 void
 kvdb_ordered_index<UseConcurrencyControl>::rscan(
     void *txn,
-    lcdf::Str start_key,
+    const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
     str_arena *arena)

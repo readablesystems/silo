@@ -17,6 +17,7 @@
 
 extern void ycsb_do_test(abstract_db *db, int argc, char **argv);
 extern void tpcc_do_test(abstract_db *db, int argc, char **argv);
+extern void tpcc_simple_do_test(abstract_db *db, int argc, char **argv);
 extern void queue_do_test(abstract_db *db, int argc, char **argv);
 extern void encstress_do_test(abstract_db *db, int argc, char **argv);
 extern void bid_do_test(abstract_db *db, int argc, char **argv);
@@ -41,6 +42,7 @@ extern int slow_exit;
 extern int retry_aborted_transaction;
 extern int no_reset_counters;
 extern int backoff_aborted_transaction;
+extern int use_hashtable;
 
 class scoped_db_thread_ctx {
 public:

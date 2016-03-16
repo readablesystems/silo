@@ -119,6 +119,30 @@ public:
   ndb_ordered_index(const std::string &name, size_t value_size_hint, bool mostly_append);
   virtual bool get(
       void *txn,
+      const std::string &key,
+      std::string &value, size_t max_bytes_read);
+  virtual const char * put(
+      void *txn,
+      const std::string &key,
+      const std::string &value);
+  virtual const char * put(
+      void *txn,
+      const std::string &key,
+      std::string &&value);
+  virtual const char *
+  insert(void *txn,
+         const std::string &key,
+         const std::string &value);
+  virtual const char *
+  insert(void *txn,
+         const std::string &key,
+         std::string &&value);
+  virtual void remove(
+      void *txn,
+      const std::string &key);  
+
+  virtual bool get(
+      void *txn,
       lcdf::Str key,
       std::string &value, size_t max_bytes_read);
   virtual const char * put(
@@ -139,13 +163,13 @@ public:
          std::string &&value);
   virtual void scan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);
   virtual void rscan(
       void *txn,
-      lcdf::Str start_key,
+      const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena);

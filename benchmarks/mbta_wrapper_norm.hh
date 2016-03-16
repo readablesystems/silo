@@ -4,7 +4,11 @@
 #include "abstract_ordered_index.h"
 #include "sto/Transaction.hh"
 #include "sto/MassTrans.hh"
+
+#define OP_LOGGING 0
+
 #include "sto/Hashtable.hh"
+#include "sto/simple_str.hh"
 #include "sto/StringWrapper.hh"
 #include <unordered_map> 
 //#include "tpcc.h"
@@ -16,7 +20,6 @@
     throw abstract_db::abstract_abort_exception(); \
   }
 
-#define OP_LOGGING 0
 
 #if OP_LOGGING
 std::atomic<long> mt_get(0);
@@ -29,20 +32,6 @@ std::atomic<long> ht_put(0);
 std::atomic<long> ht_insert(0);
 std::atomic<long> ht_del(0);
 #endif
-
-/*namespace std
-{
-  template<>
-  struct hash<item::key>
-  {
-     typedef item::key argument_type;
-     typedef std::size_t result_type;
-
-     result_type operator()(argument_type const& s) const {
-       return (std::hash<int32_t>()(s.i_id));
-     }
-  };
-}*/
 
 class mbta_wrapper;
 
@@ -66,7 +55,7 @@ public:
 
   const char *put(void* txn,
                   lcdf::Str key,
-                  std::string&& value)
+                  const std::string &value)
   {
 #if OP_LOGGING
     mt_put++;
@@ -78,120 +67,116 @@ public:
         return 0;
           });
   }
+  
+const char *insert(void *txn,
+	     lcdf::Str key,
+	     const std::string &value)
+{
+STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
+}
 
-  const char *insert(void *txn,
-                     lcdf::Str key,
-                     std::string&& value)
-  {
-    STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
-  }
-
-  void remove(void *txn, const std::string &key) {
+void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
-    mt_del++;
+mt_del++;
 #endif
-    STD_OP(mbta.transDelete<true>(key));
-  }
+STD_OP(mbta.transDelete<true>(key));
+}
 
-  void scan(void *txn,
-            lcdf::Str start_key,
-            const std::string *end_key,
-            scan_callback &callback,
-            str_arena *arena = nullptr) {
+void scan(void *txn,
+    const std::string &start_key,
+    const std::string *end_key,
+    scan_callback &callback,
+    str_arena *arena = nullptr) {
 #if OP_LOGGING
-    mt_scan++;
+mt_scan++;
 #endif    
-    mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
-          return callback.invoke(key.data(), key.length(), value);
-        }, arena));
-  }
+mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
+STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+  return callback.invoke(key.data(), key.length(), value);
+}, arena));
+}
 
-  void rscan(void *txn,
-             lcdf::Str start_key,
-             const std::string *end_key,
-             scan_callback &callback,
-             str_arena *arena = nullptr) {
+void rscan(void *txn,
+     const std::string &start_key,
+     const std::string *end_key,
+     scan_callback &callback,
+     str_arena *arena = nullptr) {
 #if 1
 #if OP_LOGGING
-    mt_rscan++;
+mt_rscan++;
 #endif
-    mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-    STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
-          return callback.invoke(key.data(), key.length(), value);
-        }, arena));
+mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
+STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+  return callback.invoke(key.data(), key.length(), value);
+}, arena));
 #endif
-  }
+}
 
-  size_t size() const
-  {
-    return mbta.approx_size();
-  }
+size_t size() const
+{
+return mbta.approx_size();
+}
 
-  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
-  std::map<std::string, uint64_t>
-  clear() {
-    throw 2;
-  }
+// TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+std::map<std::string, uint64_t>
+clear() {
+throw 2;
+}
 
-  typedef MassTrans<std::string, versioned_str_struct, READ_MY_WRITES/*opacity*/> mbta_type;
+typedef MassTrans<std::string, versioned_str_struct, false/*opacity*/> mbta_type;
 private:
-  friend class mbta_wrapper;
-  mbta_type mbta;
+friend class mbta_wrapper;
+mbta_type mbta;
 
-  const std::string name;
+const std::string name;
 
-  mbta_wrapper *db;
+mbta_wrapper *db;
 
 };
 
 class ht_ordered_index_string : public abstract_ordered_index {
 public:
-  ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
 
-  std::string *arena(void);
+std::string *arena(void);
 
-  bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
+bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
 #if OP_LOGGING
-    ht_get++;
+ht_get++;
 #endif
-    STD_OP({
-	// TODO: we'll still be faster if we just add support for max_bytes_read
-        bool ret = ht.read(key, value);
-	//auto it = ht.find(key);
- 	//bool ret = it != ht.end();
-	//value = it->second;
-        // TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
-	return ret;
-	  });
-  }
+STD_OP({
+// TODO: we'll still be faster if we just add support for max_bytes_read
+bool ret = ht.transGet(key, value);
+// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
+return ret;
+  });
+}
 
-  const char *put(
-      void* txn,
-      lcdf::Str key,
-      std::string&& value)
-  {
+const char *put(
+void* txn,
+const lcdf::Str key,
+const std::string &value)
+{
 #if OP_LOGGING
-    ht_put++;
+ht_put++;
 #endif
-    // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
-    // may be worth investigating if we can use that optimization to avoid copying keys
-    STD_OP({
-	ht.put(key, std::move(value));
-        //ht[key] = value;
+// TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
+// may be worth investigating if we can use that optimization to avoid copying keys
+STD_OP({
+ht.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
 
   const char *insert(void *txn,
                      lcdf::Str key,
-                     std::string&& value)
+                     const std::string &value)
   {
 #if OP_LOGGING
     ht_insert++;
 #endif
     STD_OP({
-	ht.transInsert(key, std::move(value)); return 0;
+	ht.transPut<true>(key, StringWrapper(value)); return 0;
 	});
   }
 
@@ -205,7 +190,7 @@ public:
   }
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -213,7 +198,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -231,8 +216,7 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<std::string, std::string, READ_MY_WRITES/*opacity*/, 1000000> ht_type;
-  //typedef std::unordered_map<K, std::string> ht_type;
+  typedef Hashtable<std::string, std::string, false/*opacity*/, 999983, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
@@ -263,7 +247,7 @@ public:
     ht_get++;
 #endif
     STD_OP({
-        bool ret = ht.read(key, value);
+        bool ret = ht.transGet(key, value);
         return ret;
           });
 
@@ -273,7 +257,7 @@ public:
   const char *put(
       void* txn,
       lcdf::Str key,
-      std::string&& value)
+      const std::string &value)
   {
     return 0;
   }
@@ -281,33 +265,34 @@ public:
   const char *put(
       void* txn,
       int32_t key,
-      std::string&& value)
+      const std::string &value)
   {
 #if OP_LOGGING
     ht_put++;
 #endif
     STD_OP({
-        ht.put(key, std::move(value));
+        ht.transPut<true>(key, StringWrapper(value));
         return 0;
           });
   }
 
+  
   const char *insert(void *txn,
                      lcdf::Str key,
-                     std::string&& value)
+                     const std::string &value)
   {
     return 0;
   }
 
   const char *insert(void *txn,
                      int32_t key,
-                     std::string&& value)
+                     const std::string &value)
   {
 #if OP_LOGGING
     ht_insert++;
 #endif
     STD_OP({
-        ht.transInsert(key, std::move(value)); return 0;});
+        ht.transPut<true>(key, StringWrapper(value)); return 0;});
   }
 
 
@@ -318,13 +303,13 @@ public:
   void remove(void *txn, int32_t key) {
 #if OP_LOGGING
     ht_del++;
-#endif
+#endif    
     STD_OP({
         ht.transDelete(key);});
-  }
+  }     
 
   void scan(void *txn,
-            lcdf::Str start_key,
+            const std::string &start_key,
             const std::string *end_key,
             scan_callback &callback,
             str_arena *arena = nullptr) {
@@ -332,7 +317,7 @@ public:
   }
 
   void rscan(void *txn,
-             lcdf::Str start_key,
+             const std::string &start_key,
              const std::string *end_key,
              scan_callback &callback,
              str_arena *arena = nullptr) {
@@ -350,7 +335,12 @@ public:
     throw 2;
   }
 
-  typedef Hashtable<int32_t, std::string, READ_MY_WRITES/*opacity*/, 1000000> ht_type;
+  void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<int32_t, std::string, false/*opacity*/, 227497, simple_str> ht_type;
   //typedef std::unordered_map<K, std::string> ht_type;
 private:
   friend class mbta_wrapper;
@@ -362,6 +352,449 @@ private:
 
 };
 
+
+class ht_ordered_index_customer_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_customer_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
+    return false;
+  }
+
+  bool get(
+      void *txn,
+      customer_key key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        bool ret = ht.transGet(key, value);
+        return ret;
+          });
+
+  }
+
+
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+    return 0;
+  }
+
+  const char *put(
+      void* txn,
+      customer_key key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        ht.transPut<true>(key, StringWrapper(value));
+        return 0;
+          });
+  }
+
+  
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+    return 0;
+  }
+
+  const char *insert(void *txn,
+                     customer_key key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        ht.transPut<true>(key, StringWrapper(value)); return 0;});
+  }
+
+
+  void remove(void *txn, lcdf::Str key) {
+      return;
+  }
+
+  void remove(void *txn, customer_key key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        ht.transDelete(key);});
+  }     
+
+  void scan(void *txn,
+            const std::string &start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             const std::string &start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+  
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<customer_key, std::string, false/*opacity*/, 999983, simple_str> ht_type;
+  //typedef std::unordered_map<K, std::string> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_history_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_history_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value));
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(history_key));
+        const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            const std::string &start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             const std::string &start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<history_key, std::string, false/*opacity*/, 20000003, simple_str> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_oorder_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_oorder_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value));
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(oorder_key));
+        const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            const std::string &start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             const std::string &start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+
+  typedef Hashtable<oorder_key, std::string, false/*opacity*/, 20000003, simple_str> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
+
+
+class ht_ordered_index_stock_key : public abstract_ordered_index {
+public:
+  ht_ordered_index_stock_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+  std::string *arena(void);
+
+  bool get(
+      void *txn,
+      lcdf::Str key,
+      std::string &value,
+      size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+    ht_get++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data())); 
+        bool ret = ht.transGet(k, value);
+        return ret;
+          });
+
+  }
+  
+  const char *put(
+      void* txn,
+      lcdf::Str key,
+      const std::string &value)
+  {
+#if OP_LOGGING
+    ht_put++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value));
+        return 0;
+          });
+  }
+
+  const char *insert(void *txn,
+                     lcdf::Str key,
+                     const std::string &value)
+  {
+#if OP_LOGGING
+    ht_insert++;
+#endif
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+  }
+
+  void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+    ht_del++;
+#endif    
+    STD_OP({
+        assert(key.length() == sizeof(stock_key));
+        const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
+        ht.transDelete(k);});
+  }     
+
+  void scan(void *txn,
+            const std::string &start_key,
+            const std::string *end_key,
+            scan_callback &callback,
+            str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("scan");
+  }
+
+  void rscan(void *txn,
+             const std::string &start_key,
+             const std::string *end_key,
+             scan_callback &callback,
+             str_arena *arena = nullptr) {
+    NDB_UNIMPLEMENTED("rscan");
+  }
+
+  size_t size() const
+  {
+    return 0;
+  }
+
+  // TODO: unclear if we need to implement, apparently this should clear the tree and possibly return some stats
+  std::map<std::string, uint64_t>
+  clear() {
+    throw 2;
+  }
+
+   void print_stats() {
+    printf("Hashtable %s: ", name.data());
+    ht.print_stats();
+  }
+
+  typedef Hashtable<stock_key, std::string, false/*opacity*/, 3000017, simple_str> ht_type;
+private:
+  friend class mbta_wrapper;
+  ht_type ht;
+
+  const std::string name;
+
+  mbta_wrapper *db;
+
+};
 
 
 class mbta_wrapper : public abstract_db {
@@ -383,12 +816,10 @@ public:
    {
         using thd = threadinfo_t;
         thd tc = Transaction::tinfo_combined();
-        printf("total_n: %llu, total_r: %llu, total_w: %llu, total_searched: %llu, total_aborts: %llu (%llu aborts at commit time)\n", tc.p(txp_total_n), tc.p(txp_total_r), tc.p(txp_total_w), tc.p(txp_total_searched), tc.p(txp_total_aborts), tc.p(txp_commit_time_aborts));
+        printf("total_n: %llu, total_r: %llu, total_w: %llu, total_searched: %llu, total_aborts: %llu (%llu aborts at commit time), rdata_size: %llu, wdata_size: %llu\n", tc.p(txp_total_n), tc.p(txp_total_r), tc.p(txp_total_w), tc.p(txp_total_searched), tc.p(txp_total_aborts), tc.p(txp_commit_time_aborts), tc.p(txp_max_rdata_size), tc.p(txp_max_wdata_size));
     }
 
 #endif
-   //std::cout << "Find traversal: " << ct << std::endl;
-    //std::cout << "Max traversal: " << max_ct << std::endl;
 #if OP_LOGGING
     printf("mt_get: %ld, mt_put: %ld, mt_del: %ld, mt_scan: %ld, mt_rscan: %ld, ht_get: %ld, ht_put: %ld, ht_insert: %ld, ht_del: %ld\n", mt_get.load(), mt_put.load(), mt_del.load(), mt_scan.load(), mt_rscan.load(), ht_get.load(), ht_put.load(), ht_insert.load(), ht_del.load());
 #endif 
@@ -448,6 +879,14 @@ public:
 	     bool mostly_append = false,
              bool use_hashtable = false) {
     if (use_hashtable) {
+      if (name.find("customer") == 0) 
+        return new ht_ordered_index_customer_key(name, this);
+      if (name.find("history") == 0)
+	return new ht_ordered_index_history_key(name, this);
+      if (name.find("oorder") == 0)
+	return new ht_ordered_index_oorder_key(name, this);
+      if (name.find("stock") == 0)
+        return new ht_ordered_index_stock_key(name, this);
       return new ht_ordered_index_int(name, this);
     }
     auto ret = new mbta_ordered_index(name, this);
