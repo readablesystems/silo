@@ -63,7 +63,7 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut<true>(key, StringWrapper(value));
+        mbta.transPut(StringWrapper(key), StringWrapper(value));
         return 0;
           });
   }
@@ -72,14 +72,14 @@ const char *insert(void *txn,
 	     lcdf::Str key,
 	     const std::string &value)
 {
-STD_OP(mbta.transInsert<true>(key, StringWrapper(value)); return 0;)
+  STD_OP(mbta.transInsert(StringWrapper(key), StringWrapper(value)); return 0;)
 }
 
 void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
 mt_del++;
 #endif
-STD_OP(mbta.transDelete<true>(key));
+ STD_OP(mbta.transDelete(StringWrapper(key)));
 }
 
 void scan(void *txn,
@@ -163,7 +163,7 @@ ht_put++;
 // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
 // may be worth investigating if we can use that optimization to avoid copying keys
 STD_OP({
-ht.transPut<true>(key, StringWrapper(value));
+ht.transPut(key, StringWrapper(value));
         return 0;
           });
   }
@@ -176,7 +176,7 @@ ht.transPut<true>(key, StringWrapper(value));
     ht_insert++;
 #endif
     STD_OP({
-	ht.transPut<true>(key, StringWrapper(value)); return 0;
+	ht.transPut(key, StringWrapper(value)); return 0;
 	});
   }
 
@@ -271,7 +271,7 @@ public:
     ht_put++;
 #endif
     STD_OP({
-        ht.transPut<true>(key, StringWrapper(value));
+        ht.transPut(key, StringWrapper(value));
         return 0;
           });
   }
@@ -292,7 +292,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-        ht.transPut<true>(key, StringWrapper(value)); return 0;});
+        ht.transPut(key, StringWrapper(value)); return 0;});
   }
 
 
@@ -396,7 +396,7 @@ public:
     ht_put++;
 #endif
     STD_OP({
-        ht.transPut<true>(key, StringWrapper(value));
+        ht.transPut(key, StringWrapper(value));
         return 0;
           });
   }
@@ -417,7 +417,7 @@ public:
     ht_insert++;
 #endif
     STD_OP({
-        ht.transPut<true>(key, StringWrapper(value)); return 0;});
+        ht.transPut(key, StringWrapper(value)); return 0;});
   }
 
 
@@ -512,7 +512,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(history_key));
         const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value));
+        ht.transPut(k, StringWrapper(value));
         return 0;
           });
   }
@@ -527,7 +527,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(history_key));
         const history_key& k = *(reinterpret_cast<const history_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+        ht.transPut(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
@@ -618,7 +618,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(oorder_key));
         const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value));
+        ht.transPut(k, StringWrapper(value));
         return 0;
           });
   }
@@ -633,7 +633,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(oorder_key));
         const oorder_key& k = *(reinterpret_cast<const oorder_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+        ht.transPut(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
@@ -725,7 +725,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(stock_key));
         const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value));
+        ht.transPut(k, StringWrapper(value));
         return 0;
           });
   }
@@ -740,7 +740,7 @@ public:
     STD_OP({
         assert(key.length() == sizeof(stock_key));
         const stock_key& k = *(reinterpret_cast<const stock_key*>(key.data()));
-        ht.transPut<true>(k, StringWrapper(value)); return 0;});
+        ht.transPut(k, StringWrapper(value)); return 0;});
   }
 
   void remove(void *txn, lcdf::Str key) {
