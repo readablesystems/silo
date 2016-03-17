@@ -63,7 +63,7 @@ public:
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
     STD_OP({
-        mbta.transPut(StringWrapper(key), StringWrapper(value));
+        mbta.transPut(key, StringWrapper(value));
         return 0;
           });
   }
@@ -72,14 +72,14 @@ const char *insert(void *txn,
 	     lcdf::Str key,
 	     const std::string &value)
 {
-  STD_OP(mbta.transInsert(StringWrapper(key), StringWrapper(value)); return 0;)
+STD_OP(mbta.transInsert(key, StringWrapper(value)); return 0;)
 }
 
 void remove(void *txn, lcdf::Str key) {
 #if OP_LOGGING
 mt_del++;
 #endif
- STD_OP(mbta.transDelete(StringWrapper(key)));
+STD_OP(mbta.transDelete(key));
 }
 
 void scan(void *txn,
