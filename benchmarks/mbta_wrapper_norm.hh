@@ -123,7 +123,7 @@ clear() {
 throw 2;
 }
 
-typedef MassTrans<std::string, versioned_str_struct, true/*opacity*/> mbta_type;
+typedef MassTrans<std::string, versioned_str_struct, false/*opacity*/> mbta_type;
 private:
 friend class mbta_wrapper;
 mbta_type mbta;
