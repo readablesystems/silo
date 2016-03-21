@@ -368,7 +368,7 @@ bench_runner::run()
   }
 
   // output for plotting script
-  cout << agg_throughput << " "
+  cout << fixed << agg_throughput << " "
        << agg_persist_throughput << " "
        << avg_latency_ms << " "
        << avg_persist_latency_ms << " "
