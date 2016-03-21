@@ -216,7 +216,7 @@ ht.transPut(key, StringWrapper(value));
     throw 2;
   }
 
-  typedef Hashtable<std::string, std::string, true/*opacity*/, 999983, simple_str> ht_type;
+  typedef Hashtable<std::string, std::string, false/*opacity*/, 999983, simple_str> ht_type;
 private:
   friend class mbta_wrapper;
   ht_type ht;
