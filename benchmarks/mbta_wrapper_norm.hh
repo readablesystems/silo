@@ -112,6 +112,10 @@ STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& va
 #endif
 }
 
+void print() override {
+    mbta.print_table();
+}
+
 size_t size() const
 {
 return mbta.approx_size();

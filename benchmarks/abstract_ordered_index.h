@@ -275,7 +275,7 @@ public:
   } 
 
 
-
+  virtual void print() { }
   /**
    * Only an estimate, not transactional!
    */
