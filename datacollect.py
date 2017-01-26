@@ -26,7 +26,7 @@ CMD="out-perf.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPT
 CMD_HASHTABLE="out-perf.ht.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 CMD_HASHTABLE_RMW="out-perf.ht.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
 CMD_RMW="out-perf.rmw.masstree/benchmarks/dbtest --runtime %s %s " % (RUNTIME, OTHER_OPTIONS)
-MAKE_CMD_TEMPL='MODE=perf CC=gcc CXX=c++-5.3\ -std=gnu++0x %s make -j dbtest'
+MAKE_CMD_TEMPL='MODE=perf CC=gcc CXX=g++\ -std=c++11 %s make -j dbtest'
 MAKE_CMD = MAKE_CMD_TEMPL % ''
 MAKE_CMD_RMW = MAKE_CMD_TEMPL % 'STO_RMW=1'
 MAKE_CMD_HASHTABLE = MAKE_CMD_TEMPL % 'HASHTABLE=1'
@@ -84,7 +84,7 @@ def run_test(testname, testtype, impl, threads, fileobj):
 
 def us_and_silo(testtype, threads, fileobj):
     run_test('us', testtype, MBTA, threads, fileobj)
-    run_test('ht', testtype, MBTA, threads, fileobj)
+#   run_test('ht', testtype, MBTA, threads, fileobj)
     run_test('silo', testtype, SILO, threads, fileobj)
 
 
@@ -144,7 +144,7 @@ def nostablesort(testtype, threads, fileobj):
 def rmw(testtype, threads, fileobj):
 #    patch_apply('rmw.patch')
      run_test('readmywrites', testtype, MBTA, threads, fileobj)
-     run_test('readmywrites_ht', testtype, MBTA, threads, fileobj)
+#    run_test('readmywrites_ht', testtype, MBTA, threads, fileobj)
 #    patch_revoke('rmw.patch')
 
 def stdtest(f, testtype, threads, testname):
