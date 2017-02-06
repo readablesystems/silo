@@ -274,8 +274,6 @@ public:
     remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)));
   } 
 
-
-  virtual void print() { }
   /**
    * Only an estimate, not transactional!
    */
