@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <type_traits>
 #include "abstract_db.h"
 #include "abstract_ordered_index.h"
 #include "sto/Transaction.hh"
@@ -134,6 +135,7 @@ mbta_wrapper *db;
 
 };
 
+#if 0
 class ht_ordered_index_string : public abstract_ordered_index {
 public:
 ht_ordered_index_string(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
@@ -226,8 +228,144 @@ private:
   mbta_wrapper *db;
 
 };
+#endif
 
+template <class KeyType, unsigned InitSize>
+class ht_ordered_index : public abstract_ordered_index {
+public:
+    static constexpr bool key_type_trivial = std::is_trivially_copyable<KeyType>::value;
+    static constexpr bool key_type_conversion =
+        !(std::is_same<KeyType, int32_t>::value || std::is_same<KeyType, std::string>::value);
 
+    typedef Hashtable<KeyType, std::string, false/*opacity*/, InitSize, simple_str> ht_type;
+
+    ht_ordered_index(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
+
+    std::string *arena(void);
+
+    bool get(void *txn, lcdf::Str key, std::string& value, size_t max_bytes_read) {
+#if OP_LOGGING
+        ht_get++;
+#endif
+        STD_OP({
+            assert(key.length() == sizeof(KeyType));
+            const KeyType& k = *reinterpret_cast<const KeyType *>(key.data());
+            bool ret = ht.transGet(k, value);
+            return ret;
+        });
+    }
+    bool get(void *txn, KeyType key, std::string& value, size_t max_bytes_read = std::string::npos) {
+#if OP_LOGGING
+        ht_get++;
+#endif
+        STD_OP({
+            bool ret = ht.transGet(key, value);
+            return ret;
+        });
+    }
+
+    const char *put(void *txn, lcdf::Str key, const std::string& value) {
+#if OP_LOGGING
+        ht_put++;
+#endif
+        STD_OP({
+            assert(key.length() == sizeof(KeyType));
+            const KeyType& k = *reinterpret_cast<const KeyType *>(key.data());
+            ht.transPut(k, StringWrapper(value));
+            return nullptr;
+        });
+    }
+    const char *put(void *txn, KeyType key, const std::string& value) {
+#if OP_LOGGING
+        ht_put++;
+#endif
+        STD_OP({
+            ht.transPut(key, StringWrapper(value));
+            return nullptr;
+        });
+    }
+
+    const char *insert(void *txn, lcdf::Str key, const std::string& value) {
+#if OP_LOGGING
+        ht_insert++;
+#endif
+        STD_OP({
+            assert(key.length() == sizeof(KeyType));
+            const KeyType& k = *reinterpret_cast<const KeyType *>(key.data());
+            ht.transPut(k, StringWrapper(value));
+            return nullptr;
+        })
+    }
+    const char *insert(void *txn, KeyType key, const std::string& value) {
+#if OP_LOGGING
+        ht_insert++;
+#endif
+        STD_OP({
+            ht.transPut(key, StringWrapper(value));
+            return nullptr;
+        });
+    }
+
+    void remove(void *txn, lcdf::Str key) {
+#if OP_LOGGING
+        ht_del++;
+#endif
+        STD_OP({
+            assert(key.length() == sizeof(KeyType));
+            const KeyType& k = *reinterpret_cast<const KeyType *>(key.data());
+            ht.transDelete(k);
+        });
+    }
+    void remove(void *txn, KeyType key) {
+#if OP_LOGGING
+        ht_del++;
+#endif
+        STD_OP({
+            ht.transDelete(key);
+        });
+    }
+
+    void scan(void *, const std::string&, const std::string *, scan_callback&, str_arena *) {
+        NDB_UNIMPLEMENTED("scan");
+    }
+    void rscan(void *, const std::string&, const std::string *, scan_callback&, str_arena *) {
+        NDB_UNIMPLEMENTED("rscan");
+    }
+
+    size_t size() const {
+        return 0;
+    }
+
+    std::map<std::string, uint64_t> clear() {
+        throw 2;
+    }
+
+    void print_stats() {
+        std::cout << "Hashtable " << name << ": ";
+        ht.print_stats();
+    }
+
+private:
+    friend class mbta_wrapper;
+    ht_type ht;
+    const std::string name;
+    mbta_wrapper *db;
+};
+
+typedef ht_ordered_index<std::string, 999983>   ht_ordered_index_string;
+typedef ht_ordered_index<int32_t, 227497>       ht_ordered_index_int; // used by "item" and "warehouse" tables
+typedef ht_ordered_index<customer_key, 999983>  ht_ordered_index_customer_key;
+typedef ht_ordered_index<history_key, 20000003> ht_ordered_index_history_key;
+typedef ht_ordered_index<oorder_key, 20000003>  ht_ordered_index_oorder_key;
+typedef ht_ordered_index<stock_key, 3000017>    ht_ordered_index_stock_key;
+
+typedef ht_ordered_index<customer_name_idx_key, 999983> ht_ordered_index_customer_ni_key;
+typedef ht_ordered_index<district_key, 999983> ht_ordered_index_district_key;
+typedef ht_ordered_index<new_order_key, 999983> ht_ordered_index_new_order_key;
+typedef ht_ordered_index<oorder_c_id_idx_key, 999983> ht_ordered_index_oorder_cidx_key;
+typedef ht_ordered_index<order_line_key, 999983> ht_ordered_index_order_line_key;
+
+#if 0
 class ht_ordered_index_int : public abstract_ordered_index {
 public:
   ht_ordered_index_int(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
@@ -351,7 +489,6 @@ private:
   mbta_wrapper *db;
 
 };
-
 
 class ht_ordered_index_customer_key : public abstract_ordered_index {
 public:
@@ -477,7 +614,6 @@ private:
 
 };
 
-
 class ht_ordered_index_history_key : public abstract_ordered_index {
 public:
   ht_ordered_index_history_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
@@ -582,7 +718,6 @@ private:
   mbta_wrapper *db;
 
 };
-
 
 class ht_ordered_index_oorder_key : public abstract_ordered_index {
 public:
@@ -690,7 +825,6 @@ private:
 
 };
 
-
 class ht_ordered_index_stock_key : public abstract_ordered_index {
 public:
   ht_ordered_index_stock_key(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
@@ -795,7 +929,7 @@ private:
   mbta_wrapper *db;
 
 };
-
+#endif
 
 class mbta_wrapper : public abstract_db {
 public:
@@ -876,17 +1010,36 @@ public:
   abstract_ordered_index *
   open_index(const std::string &name,
              size_t value_size_hint,
-	     bool mostly_append = false,
+             bool mostly_append = false,
              bool use_hashtable = false) {
+    std::cout << "openning index: " << name << std::endl;
     if (use_hashtable) {
-      if (name.find("customer") == 0) 
+      if (name == "customer")
         return new ht_ordered_index_customer_key(name, this);
-      if (name.find("history") == 0)
-	return new ht_ordered_index_history_key(name, this);
-      if (name.find("oorder") == 0)
-	return new ht_ordered_index_oorder_key(name, this);
-      if (name.find("stock") == 0)
+      if (name == "customer_name_idx")
+        return new ht_ordered_index_customer_ni_key(name, this);
+      if (name == "district")
+        return new ht_ordered_index_district_key(name, this);
+      if (name == "item")
+        return new ht_ordered_index_int(name, this);
+      if (name == "history")
+        return new ht_ordered_index_history_key(name, this);
+      if (name == "new_order")
+        return new ht_ordered_index_new_order_key(name, this);
+      if (name == "oorder")
+        return new ht_ordered_index_oorder_key(name, this);
+      if (name == "oorder_c_id_idx")
+        return new ht_ordered_index_oorder_cidx_key(name, this);
+      if (name == "order_line")
+        return new ht_ordered_index_order_line_key(name, this);
+      if (name == "stock")
         return new ht_ordered_index_stock_key(name, this);
+      if (name == "stock_data")
+        return new ht_ordered_index_stock_key(name, this);
+      if (name == "warehouse")
+        return new ht_ordered_index_int(name, this);
+      std::cerr << "unknown index: " << name << std::endl;
+      assert(false);
       return new ht_ordered_index_int(name, this);
     }
     auto ret = new mbta_ordered_index(name, this);

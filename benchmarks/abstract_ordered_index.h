@@ -79,6 +79,14 @@ public:
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
+#if HASHTABLE
+  virtual void scan(
+      void *txn,
+      const lcdf::Str start_key,
+      const lcdf::Str *end_key,
+      scan_callback &callback,
+      str_arena *arena = nullptr) { assert(false); };
+#endif
 
   /**
    * Search (*end_key, start_key] if end_key is not null, otherwise
@@ -91,6 +99,14 @@ public:
       const std::string *end_key,
       scan_callback &callback,
       str_arena *arena = nullptr) = 0;
+#if HASHTABLE
+  virtual void rscan(
+      void *txn,
+      const lcdf::Str start_key,
+      const lcdf::Str *end_key,
+      scan_callback &callback,
+      str_arena *arena = nullptr) { assert(false); }
+#endif
 
   /**
    * Put a key of length keylen, with mapping of length valuelen.

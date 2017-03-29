@@ -58,7 +58,10 @@ ifeq ($(STO_RMW_S),1)
 	OSUFFIX_R=.rmw
 endif
 ifeq ($(HASHTABLE_S),1)
-        OSUFFIX_H=.ht
+    OSUFFIX_H=.ht
+endif
+ifeq ($(HASHTABLE_S),2)
+    OSUFFIX_H=.ht.all
 endif
 OSUFFIX=$(OSUFFIX_D)$(OSUFFIX_S)$(OSUFFIX_E)$(OSUFFIX_H)$(OSUFFIX_R)
 
@@ -103,7 +106,9 @@ ifeq ($(EVENT_COUNTERS_S),1)
 endif
 CXXFLAGS += -include masstree/config.h
 OBJDEP += masstree/config.h
-O := $(O).masstree
+ifneq ($(HASHTABLE_S), 2)
+  O := $(O).masstree
+endif
 CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
 CXXFLAGS += -DHASHTABLE=$(HASHTABLE_S)
 TOP     := $(shell echo $${PWD-`pwd`})
