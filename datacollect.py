@@ -31,7 +31,7 @@ MAKE_CMD = MAKE_CMD_TEMPL % ''
 MAKE_CMD_RMW = MAKE_CMD_TEMPL % 'STO_RMW=1'
 MAKE_CMD_HASHTABLE = MAKE_CMD_TEMPL % 'HASHTABLE=1'
 MAKE_CMD_HASHTABLE_RMW = MAKE_CMD_TEMPL % 'HASHTABLE=1 STO_RMW=1'
-SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
+SINGLE_THREADED="--num-threads 1 --scale-factor 4 "
 NTHREADS = 24
 MANY_THREADS = lambda n: "--num-threads %d --scale-factor 4 " % (n)
 MANY_THREADED= MANY_THREADS(NTHREADS)
@@ -44,7 +44,7 @@ TYPES = ['neworder', 'payment', 'delivery', 'orderstatus', 'stocklevel']
 
 OUTPUT_DIR="benchmarks/data"
 
-DRY_RUN = False
+DRY_RUN = True
 
 BEST = False
 
@@ -85,7 +85,7 @@ def run_test(testname, testtype, impl, threads, fileobj):
 def us_and_silo(testtype, threads, fileobj):
     run_test('us', testtype, MBTA, threads, fileobj)
 #   run_test('ht', testtype, MBTA, threads, fileobj)
-    run_test('silo', testtype, SILO, threads, fileobj)
+#   run_test('silo', testtype, SILO, threads, fileobj)
 
 
 def simple_run(c):
@@ -100,12 +100,12 @@ def ignore_run(c):
 def remake():
     print MAKE_CMD
     simple_run(MAKE_CMD) 
-    print MAKE_CMD_HASHTABLE
-    simple_run(MAKE_CMD_HASHTABLE)
-    print MAKE_CMD_HASHTABLE_RMW
-    simple_run(MAKE_CMD_HASHTABLE_RMW)
-    print MAKE_CMD_RMW
-    simple_run(MAKE_CMD_RMW)
+    #print MAKE_CMD_HASHTABLE
+    #simple_run(MAKE_CMD_HASHTABLE)
+    #print MAKE_CMD_HASHTABLE_RMW
+    #simple_run(MAKE_CMD_HASHTABLE_RMW)
+    #print MAKE_CMD_RMW
+    #simple_run(MAKE_CMD_RMW)
 
 def patch_apply(name):
     simple_run('patch -p1 < ' + name)
@@ -142,8 +142,9 @@ def nostablesort(testtype, threads, fileobj):
 
 
 def rmw(testtype, threads, fileobj):
+    return ""
 #    patch_apply('rmw.patch')
-     run_test('readmywrites', testtype, MBTA, threads, fileobj)
+#     run_test('readmywrites', testtype, MBTA, threads, fileobj)
 #    run_test('readmywrites_ht', testtype, MBTA, threads, fileobj)
 #    patch_revoke('rmw.patch')
 
