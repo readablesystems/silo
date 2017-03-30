@@ -33,7 +33,7 @@ MAKE_CMD_HASHTABLE = MAKE_CMD_TEMPL % 'HASHTABLE=1'
 MAKE_CMD_HASHTABLE_RMW = MAKE_CMD_TEMPL % 'HASHTABLE=1 STO_RMW=1'
 SINGLE_THREADED="--num-threads 1 --scale-factor 1 "
 NTHREADS = 24
-MANY_THREADS = lambda n: "--num-threads %d --scale-factor %d " % (n, n)
+MANY_THREADS = lambda n: "--num-threads %d --scale-factor 4 " % (n)
 MANY_THREADED= MANY_THREADS(NTHREADS)
 MBTA="-dmbta "
 SILO="--disable-snapshots "
