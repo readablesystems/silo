@@ -1012,7 +1012,6 @@ public:
              size_t value_size_hint,
              bool mostly_append = false,
              bool use_hashtable = false) {
-    std::cout << "openning index: " << name << std::endl;
     if (use_hashtable) {
       if (name == "customer")
         return new ht_ordered_index_customer_key(name, this);
