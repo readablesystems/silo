@@ -24,6 +24,8 @@ STO_RMW ?= 0
 HASHTABLE ?= 0
 GPROF ?= 0
 
+OPACITY ?= 0
+
 CC ?= gcc
 CXX ?= c++
 
@@ -84,7 +86,7 @@ else
 	$(error invalid mode)
 endif
 
-CXXFLAGS := -g -Wall -std=c++0x 
+CXXFLAGS := -g -Wall
 CXXFLAGS += -MD -MP -Ithird-party/lz4 -DCONFIG_H=\"$(CONFIG_H)\"
 ifeq ($(GPROF_S),1)
 	CXXFLAGS += -pg -static-libstdc++ -static-libgcc
@@ -106,6 +108,7 @@ OBJDEP += masstree/config.h
 O := $(O).masstree
 CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
 CXXFLAGS += -DHASHTABLE=$(HASHTABLE_S)
+CXXFLAGS += -DSTO_OPACITY=$(OPACITY)
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
 ifeq ($(GPROF_S),1)
