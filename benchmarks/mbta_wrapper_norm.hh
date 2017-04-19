@@ -124,7 +124,11 @@ clear() {
 throw 2;
 }
 
+#if STO_OPACITY
+typedef MassTrans<std::string, versioned_value_struct<std::string, true>, true/*opacity*/> mbta_type;
+#else
 typedef MassTrans<std::string, versioned_value_struct<std::string, false>, false/*opacity*/> mbta_type;
+#endif
 private:
 friend class mbta_wrapper;
 mbta_type mbta;
@@ -237,7 +241,11 @@ public:
     static constexpr bool key_type_conversion =
         !(std::is_same<KeyType, int32_t>::value || std::is_same<KeyType, std::string>::value);
 
+#if STO_OPACITY
+    typedef Hashtable<KeyType, std::string, true/*opacity*/, InitSize, simple_str> ht_type;
+#else
     typedef Hashtable<KeyType, std::string, false/*opacity*/, InitSize, simple_str> ht_type;
+#endif
 
     ht_ordered_index(const std::string &name, mbta_wrapper *db) : ht(), name(name), db(db) {}
 

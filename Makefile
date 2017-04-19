@@ -111,6 +111,15 @@ ifneq ($(HASHTABLE_S), 2)
 endif
 CXXFLAGS += -DREAD_MY_WRITES=$(STO_RMW_S)
 CXXFLAGS += -DHASHTABLE=$(HASHTABLE_S)
+
+ifdef OPACITY
+CXXFLAGS += -DSTO_OPACITY=$(OPACITY)
+endif
+
+ifdef ABORT_ON_LOCKED
+CXXFLAGS += -DSTO_ABORT_ON_LOCKED=$(ABORT_ON_LOCKED)
+endif
+
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
 ifeq ($(GPROF_S),1)
