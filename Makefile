@@ -118,6 +118,10 @@ ifdef ABORT_ON_LOCKED
 CXXFLAGS += -DSTO_ABORT_ON_LOCKED=$(ABORT_ON_LOCKED)
 endif
 
+ifdef TICTOC_COMPRESSED
+CXXFLAGS += -DTICTOC_IMPL_COMPOUND=1 -DTICTOC_RUNTIME_NO_EXTEND=1
+endif
+
 TOP     := $(shell echo $${PWD-`pwd`})
 LDFLAGS := -lpthread -lnuma -lrt
 ifeq ($(GPROF_S),1)
