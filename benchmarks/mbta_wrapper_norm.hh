@@ -41,16 +41,17 @@ public:
 
   std::string *arena(void);
 
-    bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read) {
+    bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read, bool& found) {
 #if OP_LOGGING
     mt_get++;
 #endif
-    STD_OP({
+    return mbta.transGet(key, value, found);
+//    STD_OP({
 	// TODO: we'll still be faster if we just add support for max_bytes_read
-        bool ret = mbta.transGet(key, value);
+//        bool ret = mbta.transGet(key, value);
 	// TODO: can we support this directly (max_bytes_read)? would avoid this wasted allocation
-	return ret;
-	  });
+//	return ret;
+//	  });
   }
 
   const char *put(void* txn,
@@ -60,55 +61,67 @@ public:
 #if OP_LOGGING
     mt_put++;
 #endif
+    bool success = mbta.transPut(key, StringWrapper(value));
+    return success ? reinterpret_cast<const char *>(1) : nullptr;
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
-    STD_OP({
-        mbta.transPut(key, StringWrapper(value));
-        return 0;
-          });
+//    STD_OP({
+//        mbta.transPut(key, StringWrapper(value));
+//        return 0;
+//          });
   }
   
 const char *insert(void *txn,
 	     lcdf::Str key,
 	     const std::string &value)
 {
-STD_OP(mbta.transInsert(key, StringWrapper(value)); return 0;)
+    bool success = mbta.transInsert(key, StringWrapper(value));
+    return success ? reinterpret_cast<const char *>(1) : nullptr;
+//STD_OP(mbta.transInsert(key, StringWrapper(value)); return 0;)
 }
 
-void remove(void *txn, lcdf::Str key) {
+void remove(void *txn, lcdf::Str key, bool& success) {
 #if OP_LOGGING
 mt_del++;
 #endif
-STD_OP(mbta.transDelete(key));
+bool found;
+success = mbta.transDelete(key &found);
+//STD_OP(mbta.transDelete(key));
 }
 
 void scan(void *txn,
     const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
-    str_arena *arena = nullptr) {
+    str_arena *arena = nullptr, bool& success) {
 #if OP_LOGGING
 mt_scan++;
 #endif    
 mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+//STD_OP(mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+//  return callback.invoke(key.data(), key.length(), value);
+//}, arena));
+success = mbta.transQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
   return callback.invoke(key.data(), key.length(), value);
-}, arena));
+}, arena);
 }
 
 void rscan(void *txn,
      const std::string &start_key,
      const std::string *end_key,
      scan_callback &callback,
-     str_arena *arena = nullptr) {
+     str_arena *arena = nullptr, bool& success) {
 #if 1
 #if OP_LOGGING
 mt_rscan++;
 #endif
 mbta_type::Str end = end_key ? mbta_type::Str(*end_key) : mbta_type::Str();
-STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+success = mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
   return callback.invoke(key.data(), key.length(), value);
-}, arena));
+}, arena);
+//STD_OP(mbta.transRQuery(start_key, end, [&] (mbta_type::Str key, std::string& value) {
+//  return callback.invoke(key.data(), key.length(), value);
+//}, arena));
 #endif
 }
 
