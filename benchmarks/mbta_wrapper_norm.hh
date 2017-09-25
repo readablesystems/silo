@@ -41,7 +41,7 @@ public:
 
   std::string *arena(void);
 
-    bool get(void *txn, lcdf::Str key, std::string &value, size_t max_bytes_read, bool& found) {
+    bool get(void *txn, lcdf::Str key, std::string &value, bool& found, size_t max_bytes_read) {
 #if OP_LOGGING
     mt_get++;
 #endif
@@ -61,7 +61,8 @@ public:
 #if OP_LOGGING
     mt_put++;
 #endif
-    bool success = mbta.transPut(key, StringWrapper(value));
+    bool found;
+    bool success = mbta.transPut(key, StringWrapper(value), found);
     return success ? reinterpret_cast<const char *>(1) : nullptr;
     // TODO: there's an overload of put that takes non-const std::string and silo seems to use move for those.
     // may be worth investigating if we can use that optimization to avoid copying keys
@@ -75,7 +76,8 @@ const char *insert(void *txn,
 	     lcdf::Str key,
 	     const std::string &value)
 {
-    bool success = mbta.transInsert(key, StringWrapper(value));
+    bool found;
+    bool success = mbta.transInsert(key, StringWrapper(value), found);
     return success ? reinterpret_cast<const char *>(1) : nullptr;
 //STD_OP(mbta.transInsert(key, StringWrapper(value)); return 0;)
 }
@@ -85,7 +87,7 @@ void remove(void *txn, lcdf::Str key, bool& success) {
 mt_del++;
 #endif
 bool found;
-success = mbta.transDelete(key &found);
+success = mbta.transDelete(key, found);
 //STD_OP(mbta.transDelete(key));
 }
 
@@ -93,7 +95,8 @@ void scan(void *txn,
     const std::string &start_key,
     const std::string *end_key,
     scan_callback &callback,
-    str_arena *arena = nullptr, bool& success) {
+    bool& success,
+    str_arena *arena = nullptr) {
 #if OP_LOGGING
 mt_scan++;
 #endif    
@@ -110,7 +113,8 @@ void rscan(void *txn,
      const std::string &start_key,
      const std::string *end_key,
      scan_callback &callback,
-     str_arena *arena = nullptr, bool& success) {
+     bool& success,
+     str_arena *arena = nullptr) {
 #if 1
 #if OP_LOGGING
 mt_rscan++;
@@ -899,7 +903,8 @@ public:
 	     bool mostly_append = false,
              bool use_hashtable = false) {
     if (use_hashtable) {
-      if (name.find("customer") == 0) 
+      assert(false);
+      /*if (name.find("customer") == 0) 
         return new ht_ordered_index_customer_key(name, this);
       if (name.find("history") == 0)
 	return new ht_ordered_index_history_key(name, this);
@@ -907,7 +912,7 @@ public:
 	return new ht_ordered_index_oorder_key(name, this);
       if (name.find("stock") == 0)
         return new ht_ordered_index_stock_key(name, this);
-      return new ht_ordered_index_int(name, this);
+      return new ht_ordered_index_int(name, this);*/
     }
     auto ret = new mbta_ordered_index(name, this);
     return ret;

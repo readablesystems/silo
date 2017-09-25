@@ -192,7 +192,12 @@ main(int argc, char **argv)
     }
   }
 
-  if (bench_type == "ycsb")
+  if (bench_type == "tpcc") 
+    test_fn = tpcc_do_test;
+  else
+    ALWAYS_ASSERT(false); 
+
+  /*if (bench_type == "ycsb")
     test_fn = ycsb_do_test;
   else if (bench_type == "tpccSimple")
     test_fn = tpcc_simple_do_test;
@@ -205,7 +210,7 @@ main(int argc, char **argv)
   else if (bench_type == "bid")
     test_fn = bid_do_test;
   else
-    ALWAYS_ASSERT(false);
+    ALWAYS_ASSERT(false);*/
 
   if (do_compress && logfiles.empty()) {
     cerr << "[ERROR] --log-compress specified without logging enabled" << endl;

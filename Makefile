@@ -180,17 +180,18 @@ BENCH_CXXFLAGS := $(CXXFLAGS)
 BENCH_LDFLAGS := $(LDFLAGS) -lz -lrt -lcrypt -laio -ldl -lssl -lcrypto
 
 BENCH_SRCFILES = benchmarks/bench.cc \
-	benchmarks/encstress.cc \
-	benchmarks/bid.cc \
-	benchmarks/queue.cc \
 	benchmarks/tpcc.cc \
-	benchmarks/tpcc_simple.cc\
-	benchmarks/ycsb.cc \
 	benchmarks/sto/Transaction.cc \
 	benchmarks/sto/MassTrans.cc \
 	benchmarks/sto/TRcu.cc \
 	benchmarks/sto/Packer.cc \
 	benchmarks/sto/ContentionManager.cc
+
+#       benchmakrs/bid.cc
+#       benchmarks/encstress.cc
+#       benchmarks/tpcc_simple.cc
+#       benchmarks/ycsb.cc
+#       benchmarks/queue.cc
 
 BENCH_OBJFILES := $(patsubst %.cc, $(O)/%.o, $(BENCH_SRCFILES))
 

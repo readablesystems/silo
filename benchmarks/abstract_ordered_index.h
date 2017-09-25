@@ -29,30 +29,34 @@ public:
       void *txn,
       lcdf::Str key,
       std::string &value,
+      bool& found,
       size_t max_bytes_read = std::string::npos) = 0;
 
   virtual bool get(
       void *txn,
       const std::string &key,
       std::string &value,
+      bool& found,
       size_t max_bytes_read = std::string::npos) {
-      return get(txn, lcdf::Str(key), value, max_bytes_read);
+      return get(txn, lcdf::Str(key), value, found, max_bytes_read);
   }
 
   virtual bool get(
       void *txn,
       int32_t key,
       std::string &value,
+      bool& found,
       size_t max_bytes_read = std::string::npos) {
-      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
+      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, found, max_bytes_read);
   }
   
   virtual bool get(
       void *txn,
       customer_key key,
       std::string &value,
+      bool& found,
       size_t max_bytes_read = std::string::npos) {
-      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, max_bytes_read);
+      return get(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), value, found, max_bytes_read);
   }
 
   class scan_callback {
@@ -78,6 +82,7 @@ public:
       const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
+      bool& success,
       str_arena *arena = nullptr) = 0;
 
   /**
@@ -90,6 +95,7 @@ public:
       const std::string &start_key,
       const std::string *end_key,
       scan_callback &callback,
+      bool& success,
       str_arena *arena = nullptr) = 0;
 
   /**
@@ -248,30 +254,34 @@ public:
    */
   virtual void remove(
       void *txn,
-      lcdf::Str key)
+      lcdf::Str key,
+      bool& success)
   {
     put(txn, key, "");
   }
 
   virtual void remove(
       void *txn,
-      const std::string &key)
+      const std::string &key,
+      bool& success)
   {   
-    remove(txn, lcdf::Str(key));
+    remove(txn, lcdf::Str(key), success);
   } 
 
   virtual void remove(
       void *txn,
-      int32_t key)
+      int32_t key,
+      bool& success)
   {
-    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)));
+    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), success);
   }
 
   virtual void remove(
       void *txn,
-      customer_key key)
+      customer_key key,
+      bool& success)
   {   
-    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)));
+    remove(txn, lcdf::Str(reinterpret_cast<const char*>(&key), sizeof(key)), success);
   } 
 
   /**
